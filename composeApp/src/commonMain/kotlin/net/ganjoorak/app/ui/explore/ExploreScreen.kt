@@ -147,7 +147,7 @@ fun ExploreScreen(onBack: () -> Unit, onOpenPoem: (PoemRef) -> Unit, onOpenPoet:
             }) { Icon(Icons.Filled.Refresh, contentDescription = "مجموعهٔ تازه") }
         }
         LazyVerticalStaggeredGrid(
-            columns = StaggeredGridCells.Adaptive(160.dp),
+            columns = StaggeredGridCells.Adaptive(140.dp),
             state = gridState,
             modifier = Modifier.weight(1f).fillMaxWidth().windowInsetsPadding(WindowInsets.navigationBars),
             contentPadding = PaddingValues(start = 8.dp, end = 8.dp, bottom = 24.dp),

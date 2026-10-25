@@ -14,7 +14,9 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Search
@@ -121,6 +123,14 @@ fun PoetsScreen(onBack: () -> Unit, onOpenPoet: (String) -> Unit) {
         title = "شاعران",
         subtitle = "${all.size.toPersianDigits()} شاعر از گنجور و اکولالیا. دنبالشان کنید تا در فید «دنبال‌شده‌ها» بیایند.",
         onBack = onBack,
+        actions = {
+            IconButton(onClick = { view = if (view == PoetsView.Grid) PoetsView.List else PoetsView.Grid }) {
+                Icon(
+                    if (view == PoetsView.Grid) Icons.AutoMirrored.Filled.List else Icons.Filled.GridView,
+                    contentDescription = if (view == PoetsView.Grid) "نمایش فهرستی" else "نمایش شبکه‌ای",
+                )
+            }
+        },
         headerExtra = {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 OutlinedTextField(
@@ -138,32 +148,23 @@ fun PoetsScreen(onBack: () -> Unit, onOpenPoet: (String) -> Unit) {
                     modifier = Modifier.fillMaxWidth(),
                 )
                 if (needle.isEmpty()) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Row(Modifier.weight(1f).horizontalScroll(rememberScrollState())) {
-                            AppTabs(
-                                options = PoetsTab.entries,
-                                selected = tab,
-                                label = { it.label },
-                                onSelect = {
-                                    tab = it
-                                    filter = null
-                                },
-                                count = { option ->
-                                    when (option) {
-                                        PoetsTab.Featured -> featured.size
-                                        PoetsTab.Classic -> classic.size
-                                        PoetsTab.Modern -> modern.size
-                                        PoetsTab.Following -> followed.size
-                                    }
-                                },
-                            )
-                        }
-                        Spacer(Modifier.size(8.dp))
-                        SegmentedSwitch(
-                            options = PoetsView.entries,
-                            selected = view,
-                            label = { if (it == PoetsView.Grid) "شبکه" else "فهرست" },
-                            onSelect = { view = it },
+                    Row(Modifier.horizontalScroll(rememberScrollState())) {
+                        AppTabs(
+                            options = PoetsTab.entries,
+                            selected = tab,
+                            label = { it.label },
+                            onSelect = {
+                                tab = it
+                                filter = null
+                            },
+                            count = { option ->
+                                when (option) {
+                                    PoetsTab.Featured -> featured.size
+                                    PoetsTab.Classic -> classic.size
+                                    PoetsTab.Modern -> modern.size
+                                    PoetsTab.Following -> followed.size
+                                }
+                            },
                         )
                     }
                     if (groupFilters.size > 1) {
