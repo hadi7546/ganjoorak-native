@@ -1,90 +1,142 @@
 package net.ganjoorak.app.ui.profile
 
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.outlined.Bookmarks
-import androidx.compose.material.icons.outlined.People
-import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.Icon
-import androidx.compose.material3.ListItem
-import androidx.compose.material3.ListItemDefaults
-import androidx.compose.material3.Scaffold
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import net.ganjoorak.app.AppGraph
-import net.ganjoorak.app.ui.components.SectionTitle
-import net.ganjoorak.app.ui.menu.FeedPoetsSheet
-import net.ganjoorak.app.ui.settings.SettingsContent
+import net.ganjoorak.app.data.PoemRef
+import net.ganjoorak.app.data.interestByKey
+import net.ganjoorak.app.ui.components.AppPage
+import net.ganjoorak.app.ui.components.AppRow
+import net.ganjoorak.app.ui.components.BorderedCard
+import net.ganjoorak.app.ui.components.SectionLabel
+import net.ganjoorak.app.ui.components.TopicChip
 import net.ganjoorak.app.util.toPersianDigits
 
-/** The profile tab: the reader's library (saved poems, home-feed poets) followed by settings. */
+/**
+ * The site's «حساب من» without the sign-in: counts that link to the library, recent saved poems,
+ * the chosen topics, and settings. Everything stays on this device.
+ */
 @Composable
-fun ProfileScreen(onOpenSaved: () -> Unit) {
+fun ProfileScreen(
+    onBack: () -> Unit,
+    onOpenPoem: (PoemRef) -> Unit,
+    onOpenSaved: () -> Unit,
+    onOpenFollowing: () -> Unit,
+    onEditInterests: () -> Unit,
+    onOpenSettings: () -> Unit,
+) {
     val graph = AppGraph.instance
     val saved by graph.library.savedPoems.collectAsState()
     val settings by graph.settings.settings.collectAsState()
-    var pickPoets by rememberSaveable { mutableStateOf(false) }
 
-    Scaffold(
-        contentWindowInsets = WindowInsets(0),
-        topBar = { TopAppBar(title = { Text("پروفایل") }) },
-    ) { padding ->
-        Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.TopCenter) {
-            Column(Modifier.widthIn(max = 720.dp).fillMaxWidth().verticalScroll(rememberScrollState()).padding(bottom = 24.dp)) {
-                SectionTitle("کتابخانه")
-                LibraryRow(
-                    icon = Icons.Outlined.Bookmarks,
-                    title = "نشان‌شده‌ها",
-                    subtitle = if (saved.isEmpty()) "هنوز شعری نشان نکرده‌اید" else "${saved.size.toPersianDigits()} شعر",
-                    onClick = onOpenSaved,
+    AppPage(
+        title = "حساب من",
+        subtitle = "نشان‌شده‌ها، شاعران دنبال‌شده و علاقه‌مندی‌ها روی همین دستگاه نگه داشته می‌شوند.",
+        onBack = onBack,
+        actions = {
+            IconButton(onClick = onOpenSettings) { Icon(Icons.Filled.Settings, contentDescription = "تنظیمات") }
+        },
+        headerExtra = {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Stat("نشان‌شده", saved.size, onOpenSaved, Modifier.weight(1f))
+                Stat("دنبال‌شده", settings.followedPoets.size, onOpenFollowing, Modifier.weight(1f))
+                Stat("علاقه‌مندی", settings.interestKeys.size, onEditInterests, Modifier.weight(1f))
+            }
+        },
+    ) {
+        item { SectionLabel("نشان‌شده‌های اخیر") }
+        if (saved.isEmpty()) {
+            item {
+                Text(
+                    "هنوز شعری نشان نکرده‌اید.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.widthIn(max = 720.dp).fillMaxWidth().padding(horizontal = 16.dp),
                 )
-                LibraryRow(
-                    icon = Icons.Outlined.People,
-                    title = "شاعران صفحهٔ اصلی",
-                    subtitle = settings.followedPoets.takeIf { it.isNotEmpty() }?.joinToString("، ") { it.name }
-                        ?: "همهٔ شاعران",
-                    onClick = { pickPoets = true },
-                )
-                HorizontalDivider(Modifier.padding(vertical = 8.dp))
-                SectionTitle("تنظیمات")
-                SettingsContent()
+            }
+        } else {
+            items(saved.take(5), key = { it.ref.key }) { poem ->
+                AppRow(title = poem.title, meta = poem.poetName, onClick = { onOpenPoem(poem.ref) }, modifier = Modifier.fillMaxWidth())
+            }
+            if (saved.size > 5) {
+                item {
+                    AppRow(
+                        title = "همهٔ نشان‌شده‌ها",
+                        trailing = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = null) },
+                        onClick = onOpenSaved,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
             }
         }
-    }
 
-    if (pickPoets) FeedPoetsSheet(onDismiss = { pickPoets = false })
+        item { SectionLabel("علاقه‌مندی‌ها") }
+        item {
+            Column(Modifier.widthIn(max = 720.dp).fillMaxWidth().padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                if (settings.interestKeys.isEmpty()) {
+                    Text(
+                        "هنوز علاقه‌مندی‌ای انتخاب نکرده‌اید.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                } else {
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        settings.interestKeys.forEach { key ->
+                            TopicChip(interestByKey(key)?.label ?: key, active = false, onClick = onEditInterests)
+                        }
+                    }
+                }
+            }
+        }
+        item {
+            AppRow(
+                title = "ویرایش علاقه‌مندی‌ها",
+                leading = { Icon(Icons.Filled.Tune, contentDescription = null) },
+                trailing = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = null) },
+                onClick = onEditInterests,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
+        item {
+            AppRow(
+                title = "تنظیمات",
+                meta = "پوسته، قلم و اندازهٔ متن شعر",
+                leading = { Icon(Icons.Filled.Settings, contentDescription = null) },
+                trailing = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = null) },
+                onClick = onOpenSettings,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
+    }
 }
 
 @Composable
-private fun LibraryRow(icon: ImageVector, title: String, subtitle: String, onClick: () -> Unit) {
-    ListItem(
-        leadingContent = { Icon(icon, contentDescription = null) },
-        headlineContent = { Text(title) },
-        supportingContent = { Text(subtitle, maxLines = 1, overflow = TextOverflow.Ellipsis) },
-        trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null) },
-        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-        modifier = Modifier.clickable(onClick = onClick),
-    )
+private fun Stat(label: String, value: Int, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    BorderedCard(modifier, onClick = onClick) {
+        Column(Modifier.fillMaxWidth().padding(vertical = 12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(value.toPersianDigits(), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+            Text(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
 }

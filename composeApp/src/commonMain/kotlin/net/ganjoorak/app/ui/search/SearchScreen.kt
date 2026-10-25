@@ -1,5 +1,12 @@
 package net.ganjoorak.app.ui.search
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.layout.height
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import net.ganjoorak.app.ui.components.LocalAppActions
+import net.ganjoorak.app.ui.components.SegmentedSwitch
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -31,13 +38,8 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SegmentedButton
-import androidx.compose.material3.SegmentedButtonDefaults
-import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -66,22 +68,26 @@ import net.ganjoorak.app.ui.theme.LocalPoemStyle
 import net.ganjoorak.app.util.toPersianDigits
 
 @Composable
-fun SearchScreen(onOpenPoem: (PoemRef) -> Unit) {
+fun SearchScreen(onBack: () -> Unit, onOpenPoem: (PoemRef) -> Unit) {
     val graph = AppGraph.instance
     val vm = viewModel { SearchViewModel(graph.repository, graph.library) }
     val state by vm.state.collectAsState()
     val recent by graph.library.recentSearches.collectAsState()
     val focus = LocalFocusManager.current
 
-    Scaffold(
-        contentWindowInsets = WindowInsets(0),
-        topBar = {
-            TopAppBar(
-                title = { Text("جستجو") },
-            )
-        },
-    ) { padding ->
-        Column(Modifier.fillMaxSize().padding(padding), horizontalAlignment = Alignment.CenterHorizontally) {
+    val app = LocalAppActions.current
+    Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).windowInsetsPadding(WindowInsets.statusBars)) {
+        Column(Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally) {
+            Row(Modifier.fillMaxWidth().height(56.dp).padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "بازگشت") }
+                Text(
+                    "جست‌وجو",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.weight(1f).padding(horizontal = 8.dp),
+                )
+                IconButton(onClick = app.openMenu) { Icon(Icons.Filled.Menu, contentDescription = "منو") }
+            }
             Column(Modifier.widthIn(max = 840.dp).padding(horizontal = 16.dp)) {
                 OutlinedTextField(
                     value = state.query,
@@ -99,19 +105,16 @@ fun SearchScreen(onOpenPoem: (PoemRef) -> Unit) {
                         vm.saveRecent()
                         focus.clearFocus()
                     }),
+                    shape = MaterialTheme.shapes.medium,
                     modifier = Modifier.fillMaxWidth(),
                 )
-                SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
-                    SearchMode.entries.forEachIndexed { index, mode ->
-                        SegmentedButton(
-                            selected = state.mode == mode,
-                            onClick = { vm.onModeChange(mode) },
-                            shape = SegmentedButtonDefaults.itemShape(index, SearchMode.entries.size),
-                        ) {
-                            Text(if (mode == SearchMode.Text) "متن" else "معنا")
-                        }
-                    }
-                }
+                SegmentedSwitch(
+                    options = SearchMode.entries,
+                    selected = state.mode,
+                    label = { if (it == SearchMode.Text) "متنی" else "معنایی" },
+                    onSelect = vm::onModeChange,
+                    modifier = Modifier.padding(vertical = 10.dp),
+                )
             }
             if (state.loading) LinearProgressIndicator(Modifier.fillMaxWidth())
 
@@ -147,14 +150,14 @@ private fun RecentSearches(recent: List<String>, onPick: (String) -> Unit, onCle
     if (recent.isEmpty()) {
         MessageBox(
             Icons.Filled.Search,
-            "در میان شعرهای گنجور بگردید",
-            body = "جستجوی «متن» واژه‌ها را پیدا می‌کند و جستجوی «معنا» شعرهای هم‌مضمون را",
+            "در میان شعرها بگردید",
+            body = "جست‌وجوی «متنی» واژه‌ها را پیدا می‌کند و جست‌وجوی «معنایی» شعرهای هم‌مضمون را",
         )
         return
     }
     Column(Modifier.fillMaxWidth().padding(16.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("جستجوهای اخیر", style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
+            Text("جست‌وجوهای اخیر", style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
             TextButton(onClick = onClear) { Text("پاک کردن") }
         }
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {

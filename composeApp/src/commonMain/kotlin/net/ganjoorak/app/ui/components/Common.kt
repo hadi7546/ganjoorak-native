@@ -105,8 +105,8 @@ fun PoetAvatar(name: String, imageUrl: String?, size: Dp, modifier: Modifier = M
 fun SectionTitle(text: String, modifier: Modifier = Modifier) {
     Text(
         text,
-        style = MaterialTheme.typography.titleSmall,
-        color = MaterialTheme.colorScheme.primary,
+        style = MaterialTheme.typography.labelLarge,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
         modifier = modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
     )
 }

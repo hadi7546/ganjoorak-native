@@ -1,8 +1,10 @@
 package net.ganjoorak.app.ui.theme
 
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Shapes
 import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
@@ -15,6 +17,7 @@ import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.TextUnit
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import net.ganjoorak.app.data.local.AppSettings
 import net.ganjoorak.app.data.local.CoupletLayout
@@ -31,76 +34,96 @@ import net.ganjoorak.app.resources.tanha
 import net.ganjoorak.app.resources.vazirmatn
 import org.jetbrains.compose.resources.Font
 
+// The site's shadcn skin: a neutral palette where `card` is the raised surface, `border` the 1px
+// outline, `muted` the quiet fill and `primary` the foreground colour itself.
 private val LightColors = lightColorScheme(
-    primary = Color(0xFF8A5A2B),
-    onPrimary = Color(0xFFFFFFFF),
-    primaryContainer = Color(0xFFF5E4CF),
-    onPrimaryContainer = Color(0xFF2E1A06),
-    secondary = Color(0xFF6D5C4A),
-    onSecondary = Color(0xFFFFFFFF),
-    secondaryContainer = Color(0xFFEFE5DA),
-    onSecondaryContainer = Color(0xFF261A0E),
-    background = Color(0xFFFAFAF9),
-    onBackground = Color(0xFF161412),
-    surface = Color(0xFFFAFAF9),
-    onSurface = Color(0xFF161412),
-    surfaceVariant = Color(0xFFEFECE8),
-    onSurfaceVariant = Color(0xFF5B5650),
+    primary = Color(0xFF171717),
+    onPrimary = Color(0xFFFAFAFA),
+    primaryContainer = Color(0xFFF5F5F5),
+    onPrimaryContainer = Color(0xFF171717),
+    secondary = Color(0xFF171717),
+    onSecondary = Color(0xFFFAFAFA),
+    secondaryContainer = Color(0xFFF5F5F5),
+    onSecondaryContainer = Color(0xFF171717),
+    tertiary = Color(0xFF737373),
+    background = Color(0xFFFFFFFF),
+    onBackground = Color(0xFF0A0A0A),
+    surface = Color(0xFFFFFFFF),
+    onSurface = Color(0xFF0A0A0A),
+    surfaceVariant = Color(0xFFF5F5F5),
+    onSurfaceVariant = Color(0xFF737373),
+    surfaceTint = Color(0xFF171717),
     surfaceContainerLowest = Color(0xFFFFFFFF),
-    surfaceContainerLow = Color(0xFFF6F4F1),
-    surfaceContainer = Color(0xFFF1EEEA),
-    surfaceContainerHigh = Color(0xFFEBE8E3),
-    surfaceContainerHighest = Color(0xFFE5E1DC),
-    outline = Color(0xFFC9C2BA),
-    outlineVariant = Color(0xFFE4DED7),
+    surfaceContainerLow = Color(0xFFFFFFFF),
+    surfaceContainer = Color(0xFFFFFFFF),
+    surfaceContainerHigh = Color(0xFFF5F5F5),
+    surfaceContainerHighest = Color(0xFFEFEFEF),
+    outline = Color(0xFFA1A1A1),
+    outlineVariant = Color(0xFFE5E5E5),
+    error = Color(0xFFE7000B),
 )
 
 private val DarkColors = darkColorScheme(
-    primary = Color(0xFFE3BA80),
-    onPrimary = Color(0xFF432C0E),
-    primaryContainer = Color(0xFF5C4222),
-    onPrimaryContainer = Color(0xFFFFDDB4),
-    secondary = Color(0xFFD7C3AE),
-    onSecondary = Color(0xFF3A2E21),
-    secondaryContainer = Color(0xFF3A3129),
-    onSecondaryContainer = Color(0xFFF3DFC9),
-    background = Color(0xFF0E0E0D),
-    onBackground = Color(0xFFEDEAE6),
-    surface = Color(0xFF0E0E0D),
-    onSurface = Color(0xFFEDEAE6),
-    surfaceVariant = Color(0xFF2A2825),
-    onSurfaceVariant = Color(0xFFB9B2AA),
-    surfaceContainerLowest = Color(0xFF090908),
-    surfaceContainerLow = Color(0xFF151413),
-    surfaceContainer = Color(0xFF1A1918),
-    surfaceContainerHigh = Color(0xFF22211F),
-    surfaceContainerHighest = Color(0xFF2B2A28),
-    outline = Color(0xFF59544E),
-    outlineVariant = Color(0xFF33302C),
+    primary = Color(0xFFE5E5E5),
+    onPrimary = Color(0xFF171717),
+    primaryContainer = Color(0xFF262626),
+    onPrimaryContainer = Color(0xFFFAFAFA),
+    secondary = Color(0xFFE5E5E5),
+    onSecondary = Color(0xFF171717),
+    secondaryContainer = Color(0xFF262626),
+    onSecondaryContainer = Color(0xFFFAFAFA),
+    tertiary = Color(0xFFA1A1A1),
+    background = Color(0xFF0A0A0A),
+    onBackground = Color(0xFFFAFAFA),
+    surface = Color(0xFF0A0A0A),
+    onSurface = Color(0xFFFAFAFA),
+    surfaceVariant = Color(0xFF262626),
+    onSurfaceVariant = Color(0xFFA1A1A1),
+    surfaceTint = Color(0xFFE5E5E5),
+    surfaceContainerLowest = Color(0xFF0A0A0A),
+    surfaceContainerLow = Color(0xFF111111),
+    surfaceContainer = Color(0xFF171717),
+    surfaceContainerHigh = Color(0xFF262626),
+    surfaceContainerHighest = Color(0xFF2E2E2E),
+    outline = Color(0xFF737373),
+    outlineVariant = Color(0xFF262626),
+    error = Color(0xFFFF6467),
 )
 
 private val PaperColors = lightColorScheme(
     primary = Color(0xFF785A32),
-    onPrimary = Color(0xFFFFFFFF),
-    primaryContainer = Color(0xFFE6D6B8),
-    onPrimaryContainer = Color(0xFF2B1D08),
-    secondary = Color(0xFF6E604E),
-    onSecondary = Color(0xFFFFFFFF),
-    secondaryContainer = Color(0xFFE9E0CD),
-    onSecondaryContainer = Color(0xFF2A2116),
+    onPrimary = Color(0xFFFAF7ED),
+    primaryContainer = Color(0xFFEEE8D8),
+    onPrimaryContainer = Color(0xFF403428),
+    secondary = Color(0xFF785A32),
+    onSecondary = Color(0xFFFAF7ED),
+    secondaryContainer = Color(0xFFEEE8D8),
+    onSecondaryContainer = Color(0xFF403428),
+    tertiary = Color(0xFF6E604E),
     background = Color(0xFFF4F0E5),
     onBackground = Color(0xFF403428),
     surface = Color(0xFFF4F0E5),
     onSurface = Color(0xFF403428),
-    surfaceVariant = Color(0xFFEAE3D3),
+    surfaceVariant = Color(0xFFEEE8D8),
     onSurfaceVariant = Color(0xFF6E604E),
+    surfaceTint = Color(0xFF785A32),
     surfaceContainerLowest = Color(0xFFFAF7ED),
-    surfaceContainerLow = Color(0xFFF0EBDE),
-    surfaceContainer = Color(0xFFEEE8D8),
-    surfaceContainerHigh = Color(0xFFE8E1CF),
-    surfaceContainerHighest = Color(0xFFE2DAC6),
-    outline = Color(0xFFC4B79D),
+    surfaceContainerLow = Color(0xFFFAF7ED),
+    surfaceContainer = Color(0xFFFAF7ED),
+    surfaceContainerHigh = Color(0xFFEEE8D8),
+    surfaceContainerHighest = Color(0xFFE1D2B4),
+    outline = Color(0xFFB4A688),
     outlineVariant = Color(0xFFD6CCB7),
+    error = Color(0xFFB04428),
+)
+
+// 0.625rem radius, as on the site.
+private val AppShapes = Shapes(
+    extraSmall = RoundedCornerShape(4.dp),
+    small = RoundedCornerShape(6.dp),
+    medium = RoundedCornerShape(10.dp),
+    large = RoundedCornerShape(14.dp),
+    extraLarge = RoundedCornerShape(20.dp),
 )
 
 /** How poem text is rendered; derived from [AppSettings]. */
@@ -184,7 +207,7 @@ fun GanjoorakTheme(settings: AppSettings, content: @Composable () -> Unit) {
     )
 
     SystemBarsEffect(lightBackground = !dark)
-    MaterialTheme(colorScheme = colors, typography = Typography().withFont(uiFont)) {
+    MaterialTheme(colorScheme = colors, typography = Typography().withFont(uiFont), shapes = AppShapes) {
         CompositionLocalProvider(
             LocalLayoutDirection provides LayoutDirection.Rtl,
             LocalPoemStyle provides poemStyle,

@@ -13,21 +13,31 @@ import kotlinx.coroutines.launch
 import net.ganjoorak.app.data.GanjoorException
 import net.ganjoorak.app.data.Poem
 import net.ganjoorak.app.data.PoemRepository
-import net.ganjoorak.app.data.local.FollowedPoet
+import net.ganjoorak.app.data.local.FeedMode
 import net.ganjoorak.app.data.local.SettingsStore
+
+/** Everything that decides which poems the feed shows. */
+data class FeedSource(
+    val mode: FeedMode = FeedMode.All,
+    val followedKeys: List<String> = emptyList(),
+    val activeInterests: List<String> = emptyList(),
+)
 
 data class FeedState(
     val poems: List<Poem> = emptyList(),
     val loading: Boolean = false,
     val error: String? = null,
-    val followed: List<FollowedPoet> = emptyList(),
+    val source: FeedSource = FeedSource(),
     /** Bumped whenever the feed restarts so the pager can jump back to the top. */
     val generation: Int = 0,
-)
+) {
+    /** «دنبال‌شده‌ها» is selected but no poet is followed yet. */
+    val isFollowingEmpty: Boolean get() = source.mode == FeedMode.Following && source.followedKeys.isEmpty()
+}
 
 /**
- * Endless feed of random poems, loaded a few pages ahead. Like the website, each poem comes from a
- * random poet among the followed ones, or from all of Ganjoor when none are followed.
+ * Endless feed of poems, loaded a few pages ahead, like the website's home: «همه» draws random
+ * poems (from the active topic chips when any are on), «دنبال‌شده‌ها» only from followed poets.
  */
 class FeedViewModel(
     private val repository: PoemRepository,
@@ -41,7 +51,7 @@ class FeedViewModel(
     init {
         viewModelScope.launch {
             settings.settings
-                .map { it.followedPoets }
+                .map { FeedSource(it.feedMode, it.followedPoets.map { poet -> poet.key }, it.activeInterestKeys) }
                 .distinctUntilChanged()
                 .collect { restart(it) }
         }
@@ -57,25 +67,31 @@ class FeedViewModel(
         ensureLoaded()
     }
 
-    fun refresh() = restart(_state.value.followed)
+    fun refresh() = restart(_state.value.source, keepVisible = false)
 
-    private fun restart(followed: List<FollowedPoet>) {
+    /**
+     * Drops the queued poems of the old source. The poem on screen stays (as on the site), so the
+     * next swipe already lands on a poem from the new source.
+     */
+    private fun restart(source: FeedSource, keepVisible: Boolean = true) {
         job?.cancel()
+        val current = _state.value
+        val visible = current.poems.getOrNull(visibleIndex).takeIf { keepVisible }
         visibleIndex = 0
-        _state.update { FeedState(followed = followed, generation = it.generation + 1) }
+        _state.value = FeedState(poems = listOfNotNull(visible), source = source, generation = current.generation + 1)
         ensureLoaded()
     }
 
     private fun ensureLoaded() {
-        if (job?.isActive == true || _state.value.error != null) return
-        if (_state.value.poems.size > visibleIndex + PREFETCH) return
+        val current = _state.value
+        if (job?.isActive == true || current.error != null || current.isFollowingEmpty) return
+        if (current.poems.size > visibleIndex + PREFETCH) return
         job = viewModelScope.launch {
             _state.update { it.copy(loading = true) }
             var duplicates = 0
             try {
                 while (_state.value.poems.size <= visibleIndex + PREFETCH && duplicates < MAX_DUPLICATES) {
-                    val followed = _state.value.followed
-                    val poem = repository.randomPoem(followed.randomOrNull()?.key)
+                    val poem = nextPoem(_state.value.source)
                     if (_state.value.poems.any { it.ref == poem.ref }) {
                         duplicates++
                     } else {
@@ -87,6 +103,12 @@ class FeedViewModel(
                 _state.update { it.copy(loading = false, error = e.message) }
             }
         }
+    }
+
+    private suspend fun nextPoem(source: FeedSource): Poem = when (source.mode) {
+        FeedMode.Following -> repository.randomPoem(source.followedKeys.randomOrNull())
+        FeedMode.All -> source.activeInterests.takeIf { it.isNotEmpty() }?.let { repository.interestPoem(it) }
+            ?: repository.randomPoem(null)
     }
 
     private companion object {

@@ -3,38 +3,32 @@ package net.ganjoorak.app.ui.poets
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.PersonAdd
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Shuffle
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.ListItem
-import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -45,7 +39,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -55,16 +49,22 @@ import net.ganjoorak.app.data.CategoryRef
 import net.ganjoorak.app.data.GanjoorException
 import net.ganjoorak.app.data.PoemRef
 import net.ganjoorak.app.data.PoemSummary
-import net.ganjoorak.app.data.local.FollowedPoet
 import net.ganjoorak.app.data.PoetDetail
+import net.ganjoorak.app.data.PoetSource
+import net.ganjoorak.app.platform.shareText
+import net.ganjoorak.app.ui.components.AppPage
+import net.ganjoorak.app.ui.components.AppRow
+import net.ganjoorak.app.ui.components.BorderedCard
 import net.ganjoorak.app.ui.components.ErrorBox
 import net.ganjoorak.app.ui.components.Loadable
 import net.ganjoorak.app.ui.components.LoadingBox
 import net.ganjoorak.app.ui.components.PoetAvatar
-import net.ganjoorak.app.ui.components.SectionTitle
+import net.ganjoorak.app.ui.components.SectionLabel
 import net.ganjoorak.app.ui.components.rememberLoader
 import net.ganjoorak.app.util.hijriLifespan
+import net.ganjoorak.app.util.toPersianDigits
 
+/** The site's poet profile: portrait, facts, «دنبال کردن», then the poet's books and poems. */
 @Composable
 fun PoetScreen(
     poetKey: String,
@@ -76,111 +76,130 @@ fun PoetScreen(
     val loader = rememberLoader("poet-$poetKey") { graph.repository.poet(poetKey) }
     val state by loader.state.collectAsState()
     val settings by graph.settings.settings.collectAsState()
-    val snackbar = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     var loadingRandom by remember { mutableStateOf(false) }
+    var randomError by remember { mutableStateOf<String?>(null) }
     val detail = (state as? Loadable.Ready)?.value
 
-    Scaffold(
-        contentWindowInsets = WindowInsets(0),
-        snackbarHost = { SnackbarHost(snackbar) },
-        topBar = {
-            TopAppBar(
-                title = { Text(detail?.poet?.name.orEmpty()) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "بازگشت") }
-                },
-            )
+    AppPage(
+        title = detail?.poet?.name ?: "شاعر",
+        onBack = onBack,
+        actions = {
+            if (detail != null) {
+                IconButton(onClick = { shareText("${detail.poet.name}\n${poetUrl(detail)}", detail.poet.name) }) {
+                    Icon(Icons.Filled.Share, contentDescription = "اشتراک‌گذاری")
+                }
+            }
         },
-    ) { padding ->
-        Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.TopCenter) {
-            when (val s = state) {
-                is Loadable.Loading -> LoadingBox()
-                is Loadable.Error -> ErrorBox(s.message, onRetry = loader::reload)
-                is Loadable.Ready -> PoetContent(
-                    detail = s.value,
+        headerExtra = detail?.let { d ->
+            @Composable {
+                PoetHero(
+                    detail = d,
+                    followed = settings.followedPoets.any { it.key == d.poet.key },
+                    onToggleFollow = { graph.settings.toggleFollow(d.poet.key, d.poet.name) },
                     loadingRandom = loadingRandom,
+                    randomError = randomError,
                     onRandom = {
                         loadingRandom = true
+                        randomError = null
                         scope.launch {
                             try {
-                                onOpenPoem(graph.repository.randomPoem(s.value.poet.key).ref)
+                                onOpenPoem(graph.repository.randomPoem(d.poet.key).ref)
                             } catch (e: GanjoorException) {
-                                snackbar.showSnackbar(e.message ?: "")
+                                randomError = e.message
                             } finally {
                                 loadingRandom = false
                             }
                         }
                     },
-                    followed = settings.followedPoets.any { it.key == s.value.poet.key },
-                    onToggleFollow = {
-                        val poet = s.value.poet
-                        graph.settings.update { current ->
-                            val list = current.followedPoets
-                            current.copy(
-                                followedPoets = if (list.any { it.key == poet.key }) {
-                                    list.filterNot { it.key == poet.key }
-                                } else {
-                                    list + FollowedPoet(poet.key, poet.name)
-                                },
-                            )
-                        }
-                    },
-                    onOpenPoem = onOpenPoem,
-                    onOpenCategory = onOpenCategory,
                 )
+            }
+        },
+    ) {
+        when (val s = state) {
+            is Loadable.Loading -> item { LoadingBox(Modifier.height(240.dp)) }
+            is Loadable.Error -> item { ErrorBox(s.message, onRetry = loader::reload, modifier = Modifier.height(320.dp)) }
+            is Loadable.Ready -> {
+                s.value.poet.description?.let { description ->
+                    item(key = "description") { ExpandableText(description) }
+                }
+                categoryItems(s.value.root.children, onOpenCategory)
+                poemItems(s.value.root.poems, onOpenPoem)
             }
         }
     }
 }
 
+private fun poetUrl(detail: PoetDetail): String = when (detail.poet.source) {
+    PoetSource.Ganjoor -> "https://ganjoorak.ir/${detail.poet.slug}"
+    PoetSource.Echolalia -> "https://ganjoorak.ir/echolalia/${detail.poet.slug}"
+    PoetSource.Local -> "https://ganjoorak.ir/${detail.poet.slug}"
+}
+
 @Composable
-private fun PoetContent(
+private fun PoetHero(
     detail: PoetDetail,
-    loadingRandom: Boolean,
-    onRandom: () -> Unit,
     followed: Boolean,
     onToggleFollow: () -> Unit,
-    onOpenPoem: (PoemRef) -> Unit,
-    onOpenCategory: (Int) -> Unit,
+    loadingRandom: Boolean,
+    randomError: String?,
+    onRandom: () -> Unit,
 ) {
     val poet = detail.poet
-    LazyColumn(Modifier.fillMaxSize().widthIn(max = 840.dp), contentPadding = PaddingValues(bottom = 24.dp)) {
-        item(key = "header") {
-            Column(
-                Modifier.fillMaxWidth().padding(16.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                PoetAvatar(poet.name, poet.imageUrl, 104.dp)
-                Text(poet.name, style = MaterialTheme.typography.headlineSmall)
-                hijriLifespan(poet.birthYear, poet.deathYear)?.let { SupportingText(it) }
-                val places = listOfNotNull(
-                    poet.birthPlace?.let { "زادگاه: $it" },
-                    poet.deathPlace?.let { "درگذشت در: $it" },
-                ).joinToString(" · ")
-                if (places.isNotEmpty()) SupportingText(places)
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 8.dp)) {
-                    FilledTonalButton(onClick = onRandom, enabled = !loadingRandom) {
-                        if (loadingRandom) {
-                            CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
-                        } else {
-                            Icon(Icons.Filled.Shuffle, contentDescription = null, modifier = Modifier.size(18.dp))
-                        }
-                        Text("شعر تصادفی", modifier = Modifier.padding(start = 8.dp))
+    BorderedCard(Modifier.fillMaxWidth()) {
+        Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                PoetAvatar(poet.name, poet.imageUrl, 72.dp)
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    poet.nickname?.takeIf { it != poet.name }?.let {
+                        Text(it, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                     }
-                    OutlinedButton(onClick = onToggleFollow) {
-                        Icon(if (followed) Icons.Filled.Check else Icons.Filled.Home, contentDescription = null, modifier = Modifier.size(18.dp))
-                        Text(if (followed) "در صفحه اصلی" else "افزودن به صفحه اصلی", modifier = Modifier.padding(start = 8.dp))
+                    val stats = listOfNotNull(
+                        hijriLifespan(poet.birthYear, poet.deathYear),
+                        poet.birthPlace?.let { "زادگاه: $it" },
+                        poet.deathPlace?.let { "آرامگاه: $it" },
+                        detail.root.children.size.takeIf { it > 0 }?.let { "${it.toPersianDigits()} اثر" },
+                    )
+                    stats.forEach {
+                        Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
             }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                if (followed) {
+                    Button(
+                        onClick = onToggleFollow,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                            contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                        ),
+                        modifier = Modifier.weight(1f),
+                    ) {
+                        Icon(Icons.Filled.Check, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text("دنبال می‌کنید")
+                    }
+                } else {
+                    Button(onClick = onToggleFollow, modifier = Modifier.weight(1f)) {
+                        Icon(Icons.Filled.PersonAdd, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text("دنبال کردن")
+                    }
+                }
+                OutlinedButton(onClick = onRandom, enabled = !loadingRandom, modifier = Modifier.weight(1f)) {
+                    if (loadingRandom) {
+                        CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
+                    } else {
+                        Icon(Icons.Filled.Shuffle, contentDescription = null, modifier = Modifier.size(18.dp))
+                    }
+                    Spacer(Modifier.width(8.dp))
+                    Text("شعر تصادفی")
+                }
+            }
+            if (randomError != null) {
+                Text(randomError, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+            }
         }
-        poet.description?.let { description ->
-            item(key = "description") { ExpandableText(description) }
-        }
-        categoryItems(detail.root.children, onOpenCategory)
-        poemItems(detail.root.poems, onOpenPoem)
     }
 }
 
@@ -194,35 +213,37 @@ private fun ExpandableText(text: String) {
         maxLines = if (expanded) Int.MAX_VALUE else 4,
         overflow = TextOverflow.Ellipsis,
         modifier = Modifier
+            .widthIn(max = 720.dp)
             .fillMaxWidth()
             .clickable { expanded = !expanded }
             .animateContentSize()
-            .padding(horizontal = 20.dp, vertical = 8.dp),
+            .padding(horizontal = 16.dp, vertical = 8.dp),
     )
 }
 
 fun LazyListScope.categoryItems(categories: List<CategoryRef>, onOpenCategory: (Int) -> Unit) {
     if (categories.isEmpty()) return
-    item(key = "cats-title") { SectionTitle("آثار") }
+    item(key = "cats-title") { SectionLabel("آثار") }
     items(categories, key = { "c${it.id}" }) { category ->
-        ListItem(
-            headlineContent = { Text(category.title) },
-            leadingContent = { Icon(Icons.AutoMirrored.Filled.MenuBook, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
-            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-            modifier = Modifier.clickable { onOpenCategory(category.id) },
+        AppRow(
+            title = category.title,
+            leading = { Icon(Icons.AutoMirrored.Filled.MenuBook, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant) },
+            trailing = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = null) },
+            onClick = { onOpenCategory(category.id) },
+            modifier = Modifier.fillMaxWidth(),
         )
     }
 }
 
 fun LazyListScope.poemItems(poems: List<PoemSummary>, onOpenPoem: (PoemRef) -> Unit) {
     if (poems.isEmpty()) return
-    item(key = "poems-title") { SectionTitle("اشعار") }
+    item(key = "poems-title") { SectionLabel("شعرها") }
     items(poems, key = { "p${it.ref.key}" }) { poem ->
-        ListItem(
-            headlineContent = { Text(poem.title) },
-            supportingContent = poem.excerpt?.let { { Text(it, maxLines = 2, overflow = TextOverflow.Ellipsis) } },
-            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-            modifier = Modifier.clickable { onOpenPoem(poem.ref) },
+        AppRow(
+            title = poem.title,
+            meta = poem.excerpt,
+            onClick = { onOpenPoem(poem.ref) },
+            modifier = Modifier.fillMaxWidth(),
         )
     }
 }

@@ -1,5 +1,9 @@
 package net.ganjoorak.app.ui.poem
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.windowInsetsPadding
+import net.ganjoorak.app.ui.components.FloatingIconButton
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -97,72 +101,68 @@ fun PoemScreen(
     val uriHandler = LocalUriHandler.current
     val poem = (state as? Loadable.Ready)?.value
 
-    Scaffold(
-        contentWindowInsets = WindowInsets(0),
-        snackbarHost = { SnackbarHost(snackbar) },
-        topBar = {
-            TopAppBar(
-                title = { Text(poem?.title.orEmpty(), maxLines = 1, overflow = TextOverflow.Ellipsis) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "بازگشت") }
-                },
-                actions = {
-                    if (poem != null) {
-                        val isSaved = saved.any { it.ref == poem.ref }
-                        IconButton(onClick = { graph.library.toggleSaved(poem) }) {
-                            Icon(
-                                if (isSaved) Icons.Filled.Bookmark else Icons.Filled.BookmarkBorder,
-                                contentDescription = if (isSaved) "حذف از نشان‌ها" else "نشان کردن",
+    val player by graph.player.state.collectAsState()
+    Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
+        when (val s = state) {
+            is Loadable.Loading -> LoadingBox()
+            is Loadable.Error -> ErrorBox(s.message, onRetry = loader::reload)
+            is Loadable.Ready -> PoemReader(
+                poem = s.value,
+                player = graph.player,
+                onOpenPoem = onOpenPoem,
+                onOpenPoet = onOpenPoet,
+                onOpenCategory = onOpenCategory,
+            )
+        }
+
+        FloatingIconButton(
+            Icons.AutoMirrored.Filled.ArrowBack,
+            "بازگشت",
+            onBack,
+            modifier = Modifier.align(Alignment.TopStart).windowInsetsPadding(WindowInsets.statusBars).padding(12.dp),
+        )
+
+        PoemFloatingControls(
+            poem = poem,
+            isSaved = poem != null && saved.any { it.ref == poem.ref },
+            isPlaying = poem != null && player.poemRef == poem.ref && player.isPlaying,
+            onToggleSave = { poem?.let(graph.library::toggleSaved) },
+            onShare = { sharing = true },
+            onPlay = { poem?.let { p -> if (player.poemRef == p.ref) graph.player.toggle() else graph.player.play(p) } },
+            onOpenPoet = onOpenPoet,
+            extra = {
+                if (poem != null) {
+                    var menu by remember { mutableStateOf(false) }
+                    Box {
+                        FloatingIconButton(Icons.Filled.MoreVert, "بیشتر", { menu = true })
+                        DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+                            DropdownMenuItem(
+                                text = { Text("کپی متن شعر") },
+                                leadingIcon = { Icon(Icons.Filled.ContentCopy, contentDescription = null) },
+                                onClick = {
+                                    menu = false
+                                    copyText(poem.shareText())
+                                    scope.launch { snackbar.showSnackbar("متن شعر کپی شد") }
+                                },
                             )
-                        }
-                        IconButton(onClick = { sharing = true }) { Icon(Icons.Filled.Share, contentDescription = "هم‌رسانی") }
-                        var menu by remember { mutableStateOf(false) }
-                        Box {
-                            IconButton(onClick = { menu = true }) { Icon(Icons.Filled.MoreVert, contentDescription = "بیشتر") }
-                            DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+                            if (poem.link.isNotBlank()) {
                                 DropdownMenuItem(
-                                    text = { Text("کپی متن شعر") },
-                                    leadingIcon = { Icon(Icons.Filled.ContentCopy, contentDescription = null) },
+                                    text = { Text(if (poem.source == PoetSource.Ganjoor) "دیدن در گنجور" else "مشاهدهٔ منبع") },
+                                    leadingIcon = { Icon(Icons.AutoMirrored.Filled.OpenInNew, contentDescription = null) },
                                     onClick = {
                                         menu = false
-                                        copyText(poem.shareText())
-                                        scope.launch { snackbar.showSnackbar("متن شعر کپی شد") }
+                                        uriHandler.openUri(poem.link)
                                     },
                                 )
-                                if (poem.link.isNotBlank()) {
-                                    DropdownMenuItem(
-                                        text = { Text(if (poem.source == PoetSource.Ganjoor) "دیدن در گنجور" else "مشاهدهٔ منبع") },
-                                        leadingIcon = { Icon(Icons.AutoMirrored.Filled.OpenInNew, contentDescription = null) },
-                                        onClick = {
-                                            menu = false
-                                            uriHandler.openUri(poem.link)
-                                        },
-                                    )
-                                }
                             }
                         }
                     }
-                },
-            )
-        },
-    ) { padding ->
-        Box(Modifier.fillMaxSize().padding(padding)) {
-            when (val s = state) {
-                is Loadable.Loading -> LoadingBox()
-                is Loadable.Error -> ErrorBox(s.message, onRetry = loader::reload)
-                is Loadable.Ready -> {
-                    PoemReader(
-                        poem = s.value,
-                        player = graph.player,
-                        onOpenPoem = onOpenPoem,
-                        onOpenPoet = onOpenPoet,
-                        onOpenCategory = onOpenCategory,
-                    )
-                    if (sharing) ShareSheet(s.value, onDismiss = { sharing = false })
                 }
-            }
-        }
+            },
+        )
+        SnackbarHost(snackbar, Modifier.align(Alignment.BottomCenter).padding(bottom = PoemControlsHeight))
     }
+    if (sharing && poem != null) ShareSheet(poem, onDismiss = { sharing = false })
 }
 
 @Composable
@@ -192,8 +192,8 @@ private fun PoemReader(
         val sideBySide = style.sideBySide(minOf(maxWidth, 900.dp))
         LazyColumn(
             state = listState,
-            modifier = Modifier.fillMaxSize().widthIn(max = 900.dp),
-            contentPadding = PaddingValues(bottom = 32.dp),
+            modifier = Modifier.fillMaxSize().widthIn(max = 900.dp).windowInsetsPadding(WindowInsets.statusBars),
+            contentPadding = PaddingValues(top = 48.dp, bottom = PoemControlsHeight),
         ) {
             item(key = "header") {
                 PoemHeader(

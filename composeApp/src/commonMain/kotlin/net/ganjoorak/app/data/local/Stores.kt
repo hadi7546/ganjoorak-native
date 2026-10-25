@@ -20,13 +20,16 @@ enum class PoemFont { Vazirmatn, Samim, Tanha, Shabnam, Gandom, Parastoo, Sahel,
 
 enum class CoupletLayout { Auto, Stacked, SideBySide }
 
+/** Where the home feed draws its poems from. */
+enum class FeedMode { All, Following }
+
 /** A poet whose poems appear in the home feed; [key] is a [net.ganjoorak.app.data.Poet.key]. */
 @Serializable
 data class FollowedPoet(val key: String, val name: String)
 
 @Serializable
 data class AppSettings(
-    val theme: ThemeMode = ThemeMode.System,
+    val theme: ThemeMode = ThemeMode.Dark,
     val poemFont: PoemFont = PoemFont.Vazirmatn,
     val fontScale: Float = 1f,
     val coupletLayout: CoupletLayout = CoupletLayout.Auto,
@@ -34,6 +37,12 @@ data class AppSettings(
     val autoScrollWithAudio: Boolean = true,
     /** Empty means random poems from all of Ganjoor, like the website. */
     val followedPoets: List<FollowedPoet> = emptyList(),
+    val feedMode: FeedMode = FeedMode.All,
+    /** Topics offered as chips above the feed; see [net.ganjoorak.app.data.PoemInterests]. */
+    val interestKeys: List<String> = emptyList(),
+    /** The chips currently switched on; none means no narrowing. */
+    val activeInterestKeys: List<String> = emptyList(),
+    val hasChosenInterests: Boolean = false,
 )
 
 /** A JSON value persisted in [Settings] and mirrored as a [StateFlow]. */
@@ -61,6 +70,35 @@ class SettingsStore(settings: Settings) {
     val settings: StateFlow<AppSettings> = value.flow
 
     fun update(transform: (AppSettings) -> AppSettings) = value.update(transform)
+
+    fun follow(key: String, name: String) = update {
+        if (it.followedPoets.any { poet -> poet.key == key }) it else it.copy(followedPoets = it.followedPoets + FollowedPoet(key, name))
+    }
+
+    fun unfollow(key: String) = update { it.copy(followedPoets = it.followedPoets.filterNot { poet -> poet.key == key }) }
+
+    fun toggleFollow(key: String, name: String) {
+        if (settings.value.followedPoets.any { it.key == key }) unfollow(key) else follow(key, name)
+    }
+
+    fun setInterests(keys: List<String>) = update { settings ->
+        val chosen = net.ganjoorak.app.data.sanitizeInterestKeys(keys)
+        settings.copy(
+            interestKeys = chosen,
+            activeInterestKeys = settings.activeInterestKeys.filter { it in chosen },
+            hasChosenInterests = true,
+        )
+    }
+
+    fun toggleActiveInterest(key: String) = update {
+        it.copy(
+            activeInterestKeys = if (key in it.activeInterestKeys) it.activeInterestKeys - key else it.activeInterestKeys + key,
+        )
+    }
+
+    fun clearActiveInterests() = update { it.copy(activeInterestKeys = emptyList()) }
+
+    fun setFeedMode(mode: FeedMode) = update { it.copy(feedMode = mode) }
 }
 
 class LibraryStore(settings: Settings) {

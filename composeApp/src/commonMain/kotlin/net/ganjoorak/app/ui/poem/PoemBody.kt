@@ -23,6 +23,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -51,20 +52,31 @@ fun coupletNumbers(blocks: List<PoemBlock>): IntArray {
     return IntArray(blocks.size) { i -> if (blocks[i] is PoemBlock.Couplet) ++n else 0 }
 }
 
+/**
+ * The site's title section: an optional eyebrow (feed switch and topic chips), the poem title, the
+ * poet line, the book trail and the summary.
+ */
 @Composable
 fun PoemHeader(
     poem: Poem,
     onPoetClick: ((String) -> Unit)?,
     onCategoryClick: ((CategoryRef) -> Unit)?,
     modifier: Modifier = Modifier,
-    /** False where the title is already shown elsewhere, e.g. in the feed's top bar. */
-    showTitle: Boolean = true,
+    eyebrow: (@Composable () -> Unit)? = null,
 ) {
     Column(
-        modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 16.dp),
+        modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
+        eyebrow?.invoke()
+        Text(
+            poem.title,
+            style = MaterialTheme.typography.headlineMedium.copy(fontFamily = LocalPoemStyle.current.fontFamily),
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(top = 8.dp),
+        )
         val poetClick = poem.poetKey?.let { key -> onPoetClick?.let { { it(key) } } }
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -73,12 +85,12 @@ fun PoemHeader(
                 .then(if (poetClick != null) Modifier.clickable(onClick = poetClick) else Modifier)
                 .padding(horizontal = 8.dp, vertical = 4.dp),
         ) {
-            PoetAvatar(poem.poetName, poem.poetImageUrl, 36.dp)
+            PoetAvatar(poem.poetName, poem.poetImageUrl, 28.dp)
             Text(
                 poem.poetName,
                 style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.padding(start = 10.dp),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(start = 8.dp),
             )
         }
         val crumbs = poem.breadcrumbs.drop(1)
@@ -102,13 +114,6 @@ fun PoemHeader(
                     )
                 }
             }
-        }
-        if (showTitle) {
-            Text(
-                poem.title,
-                style = MaterialTheme.typography.headlineSmall,
-                textAlign = TextAlign.Center,
-            )
         }
         poem.summary?.let {
             Text(

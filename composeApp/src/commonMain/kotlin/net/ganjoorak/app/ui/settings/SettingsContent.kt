@@ -69,11 +69,11 @@ fun SettingsContent() {
 
         SectionTitle("پوسته")
         ChipRow(
-            options = listOf(ThemeMode.System, ThemeMode.Light, ThemeMode.Dark, ThemeMode.Paper),
+            options = listOf(ThemeMode.Dark, ThemeMode.Light, ThemeMode.Paper, ThemeMode.System),
             selected = settings.theme,
             label = {
                 when (it) {
-                    ThemeMode.Dark -> "تیره"
+                    ThemeMode.Dark -> "تاریک"
                     ThemeMode.Light -> "روشن"
                     ThemeMode.Paper -> "کاغذی"
                     ThemeMode.System -> "هماهنگ با دستگاه"

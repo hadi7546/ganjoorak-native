@@ -58,6 +58,11 @@ for apk in androidApp/build/outputs/apk/debug/androidApp-debug.apk androidApp/bu
   adb logcat -c
   adb shell am start -W -n "$pkg/.MainActivity"
   sleep 25
+  # First run opens the topic picker over the feed; keep a picture of it, then close it.
+  dismiss_anr
+  [[ "$name" == *release* ]] && shot "$name-first-run"
+  tap "بعداً"
+  sleep 3
   if adb shell pidof "$pkg" >/dev/null; then
     echo "$name is running"
   else
@@ -95,9 +100,12 @@ for apk in androidApp/build/outputs/apk/debug/androidApp-debug.apk androidApp/bu
   dismiss_anr
   shot "$name"
   if [[ "$name" == *release* ]]; then
-    for tab in "شاعران" "پروفایل"; do
-      echo "--- tab $tab"
+    for tab in "شاعران" "حساب من"; do
+      echo "--- menu → $tab"
       dismiss_anr
+      tap "منو"
+      sleep 2
+      shot "$name-menu"
       tap "$tab"
       sleep 12
       dismiss_anr
