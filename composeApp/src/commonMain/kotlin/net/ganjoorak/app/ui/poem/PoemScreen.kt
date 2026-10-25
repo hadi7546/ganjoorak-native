@@ -100,6 +100,7 @@ fun PoemScreen(
     val scope = rememberCoroutineScope()
     val uriHandler = LocalUriHandler.current
     val poem = (state as? Loadable.Ready)?.value
+    LaunchedEffect(poem?.ref) { poem?.let(graph.library::recordRead) }
 
     val player by graph.player.state.collectAsState()
     Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {

@@ -10,7 +10,7 @@ import net.ganjoorak.app.ui.components.AppPage
 
 @Composable
 fun SettingsScreen(onBack: () -> Unit) {
-    AppPage(title = "تنظیمات", onBack = onBack, hideSearch = true) {
+    AppPage(title = "تنظیمات", onBack = onBack) {
         item { Box(Modifier.widthIn(max = 720.dp).fillMaxWidth()) { SettingsContent() } }
     }
 }

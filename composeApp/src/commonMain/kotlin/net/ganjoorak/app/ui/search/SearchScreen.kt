@@ -1,11 +1,24 @@
 package net.ganjoorak.app.ui.search
 
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.layout.width
+import androidx.compose.material3.VerticalDivider
+import androidx.compose.runtime.produceState
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.draw.clip
+import net.ganjoorak.app.data.Poet
+import net.ganjoorak.app.data.PoetSource
+import net.ganjoorak.app.ui.components.AppPageBar
+import net.ganjoorak.app.ui.components.AppPageHeader
+import net.ganjoorak.app.ui.components.PoetAvatar
+import net.ganjoorak.app.ui.components.TopicChip
+import net.ganjoorak.app.util.normalizeForSearch
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.statusBars
-import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.height
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import net.ganjoorak.app.ui.components.LocalAppActions
 import net.ganjoorak.app.ui.components.SegmentedSwitch
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -14,7 +27,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -27,7 +39,6 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.History
-import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.SearchOff
 import androidx.compose.material3.AssistChip
@@ -68,32 +79,36 @@ import net.ganjoorak.app.ui.theme.LocalPoemStyle
 import net.ganjoorak.app.util.toPersianDigits
 
 @Composable
-fun SearchScreen(onBack: () -> Unit, onOpenPoem: (PoemRef) -> Unit) {
+fun SearchScreen(onBack: () -> Unit, onOpenPoem: (PoemRef) -> Unit, onOpenPoet: (String) -> Unit) {
     val graph = AppGraph.instance
     val vm = viewModel { SearchViewModel(graph.repository, graph.library) }
     val state by vm.state.collectAsState()
     val recent by graph.library.recentSearches.collectAsState()
     val focus = LocalFocusManager.current
 
-    val app = LocalAppActions.current
-    Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).windowInsetsPadding(WindowInsets.statusBars)) {
+    var source by rememberSaveable { mutableStateOf<PoetSource?>(null) }
+    // Poets whose names match, shown above the poems as on the site.
+    val poets by produceState(emptyList<Poet>()) {
+        value = runCatching {
+            graph.repository.poetGroups().flatMap { it.poets } + graph.repository.contemporaryGroups().flatMap { it.poets }
+        }.getOrDefault(emptyList())
+    }
+    val needle = state.query.normalizeForSearch()
+    val matchingPoets = if (needle.length < 2) emptyList() else poets.filter {
+        (source == null || it.source == source) &&
+            (needle in it.name.normalizeForSearch() || needle in it.nickname.orEmpty().normalizeForSearch())
+    }.distinctBy { it.key }.take(12)
+
+    Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
         Column(Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally) {
-            Row(Modifier.fillMaxWidth().height(56.dp).padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "بازگشت") }
-                Text(
-                    "جست‌وجو",
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.weight(1f).padding(horizontal = 8.dp),
-                )
-                IconButton(onClick = app.openMenu) { Icon(Icons.Filled.Menu, contentDescription = "منو") }
-            }
+            AppPageBar("جست‌وجو", scrolled = false, onBack = onBack)
+            AppPageHeader("جست‌وجو", "شاعر، مصرع یا یک واژه؛ در گنجور، اکولالیا و شاعران محلی.")
             Column(Modifier.widthIn(max = 840.dp).padding(horizontal = 16.dp)) {
                 OutlinedTextField(
                     value = state.query,
                     onValueChange = vm::onQueryChange,
                     singleLine = true,
-                    placeholder = { Text(if (state.mode == SearchMode.Text) "واژه یا مصراعی از شعر" else "مضمون، مثلاً «غم غربت»") },
+                    placeholder = { Text(if (state.mode == SearchMode.Text) "نام شاعر، مصرع یا واژه…" else "موضوع یا حال‌وهوای شعر…") },
                     leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
                     trailingIcon = {
                         if (state.query.isNotEmpty()) {
@@ -108,13 +123,46 @@ fun SearchScreen(onBack: () -> Unit, onOpenPoem: (PoemRef) -> Unit) {
                     shape = MaterialTheme.shapes.medium,
                     modifier = Modifier.fillMaxWidth(),
                 )
-                SegmentedSwitch(
-                    options = SearchMode.entries,
-                    selected = state.mode,
-                    label = { if (it == SearchMode.Text) "متنی" else "معنایی" },
-                    onSelect = vm::onModeChange,
-                    modifier = Modifier.padding(vertical = 10.dp),
-                )
+                Row(
+                    Modifier.fillMaxWidth().padding(vertical = 10.dp).horizontalScroll(rememberScrollState()),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    SegmentedSwitch(
+                        options = SearchMode.entries,
+                        selected = state.mode,
+                        label = { if (it == SearchMode.Text) "واژه" else "معنا" },
+                        onSelect = vm::onModeChange,
+                    )
+                    VerticalDivider(Modifier.height(24.dp).padding(horizontal = 4.dp), color = MaterialTheme.colorScheme.outlineVariant)
+                    listOf<Pair<PoetSource?, String>>(
+                        null to "همه",
+                        PoetSource.Ganjoor to "گنجور",
+                        PoetSource.Echolalia to "اکولالیا",
+                        PoetSource.Local to "محلی",
+                    ).forEach { (value, label) ->
+                        TopicChip(label, active = source == value, onClick = { source = value })
+                    }
+                }
+                if (matchingPoets.isNotEmpty()) {
+                    Text(
+                        "شاعران",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(bottom = 6.dp),
+                    )
+                    Row(Modifier.horizontalScroll(rememberScrollState()).padding(bottom = 8.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        matchingPoets.forEach { poet ->
+                            Column(
+                                Modifier.width(72.dp).clip(MaterialTheme.shapes.medium).clickable { onOpenPoet(poet.key) }.padding(4.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                            ) {
+                                PoetAvatar(poet.name, poet.imageUrl, 52.dp)
+                                Text(poet.name, style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            }
+                        }
+                    }
+                }
             }
             if (state.loading) LinearProgressIndicator(Modifier.fillMaxWidth())
 
@@ -132,7 +180,7 @@ fun SearchScreen(onBack: () -> Unit, onOpenPoem: (PoemRef) -> Unit) {
                     state.searched && state.hits.isEmpty() && !state.loading ->
                         MessageBox(Icons.Filled.SearchOff, "نتیجه‌ای پیدا نشد", body = "واژهٔ دیگری را امتحان کنید")
                     else -> Results(
-                        state = state,
+                        state = if (source == null) state else state.copy(hits = state.hits.filter { it.ref.source == source }),
                         onLoadMore = vm::loadMore,
                         onOpen = { hit ->
                             vm.saveRecent()

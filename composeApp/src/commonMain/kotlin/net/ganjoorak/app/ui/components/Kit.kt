@@ -32,6 +32,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
+import net.ganjoorak.app.util.toPersianDigits
 
 /** What every screen can ask of the shell: the navigation drawer and the search page. */
 class AppActions(val openMenu: () -> Unit, val openSearch: () -> Unit)
@@ -169,6 +170,55 @@ fun AppRow(
         if (trailing != null) {
             androidx.compose.runtime.CompositionLocalProvider(LocalContentColor provides MaterialTheme.colorScheme.onSurfaceVariant) {
                 trailing()
+            }
+        }
+    }
+}
+
+/**
+ * shadcn `Tabs`: a muted rounded track where the active tab is a raised card. Each tab may carry a
+ * small count, like the site's library and poets tabs.
+ */
+@Composable
+fun <T> AppTabs(
+    options: List<T>,
+    selected: T,
+    label: (T) -> String,
+    onSelect: (T) -> Unit,
+    modifier: Modifier = Modifier,
+    count: (T) -> Int? = { null },
+) {
+    val colors = MaterialTheme.colorScheme
+    val shape = MaterialTheme.shapes.medium
+    Row(
+        modifier
+            .clip(shape)
+            .background(colors.surfaceContainerHigh)
+            .padding(3.dp),
+        horizontalArrangement = Arrangement.spacedBy(2.dp),
+    ) {
+        options.forEach { option ->
+            val active = option == selected
+            val background by animateColorAsState(if (active) colors.background else Color.Transparent, tween(220))
+            val content by animateColorAsState(if (active) colors.onSurface else colors.onSurfaceVariant, tween(220))
+            Row(
+                Modifier
+                    .height(34.dp)
+                    .clip(MaterialTheme.shapes.small)
+                    .background(background)
+                    .selectable(selected = active, role = Role.Tab, onClick = { if (!active) onSelect(option) })
+                    .padding(horizontal = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                Text(label(option), color = content, style = MaterialTheme.typography.labelLarge, maxLines = 1)
+                count(option)?.takeIf { it > 0 }?.let {
+                    Text(
+                        it.toPersianDigits(),
+                        color = colors.onSurfaceVariant,
+                        style = MaterialTheme.typography.labelSmall,
+                    )
+                }
             }
         }
     }

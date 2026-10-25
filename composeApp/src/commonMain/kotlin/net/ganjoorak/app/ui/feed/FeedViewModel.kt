@@ -20,7 +20,6 @@ import net.ganjoorak.app.data.local.SettingsStore
 data class FeedSource(
     val mode: FeedMode = FeedMode.All,
     val followedKeys: List<String> = emptyList(),
-    val activeInterests: List<String> = emptyList(),
 )
 
 data class FeedState(
@@ -37,7 +36,7 @@ data class FeedState(
 
 /**
  * Endless feed of poems, loaded a few pages ahead, like the website's home: «همه» draws random
- * poems (from the active topic chips when any are on), «دنبال‌شده‌ها» only from followed poets.
+ * poems from all poets, «دنبال‌شده‌ها» only from followed poets.
  */
 class FeedViewModel(
     private val repository: PoemRepository,
@@ -51,7 +50,7 @@ class FeedViewModel(
     init {
         viewModelScope.launch {
             settings.settings
-                .map { FeedSource(it.feedMode, it.followedPoets.map { poet -> poet.key }, it.activeInterestKeys) }
+                .map { FeedSource(it.feedMode, it.followedPoets.map { poet -> poet.key }) }
                 .distinctUntilChanged()
                 .collect { restart(it) }
         }
@@ -107,8 +106,7 @@ class FeedViewModel(
 
     private suspend fun nextPoem(source: FeedSource): Poem = when (source.mode) {
         FeedMode.Following -> repository.randomPoem(source.followedKeys.randomOrNull())
-        FeedMode.All -> source.activeInterests.takeIf { it.isNotEmpty() }?.let { repository.interestPoem(it) }
-            ?: repository.randomPoem(null)
+        FeedMode.All -> repository.randomPoem(null)
     }
 
     private companion object {

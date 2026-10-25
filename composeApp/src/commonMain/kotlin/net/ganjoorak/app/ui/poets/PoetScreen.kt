@@ -1,5 +1,7 @@
 package net.ganjoorak.app.ui.poets
 
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.background
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -120,9 +122,6 @@ fun PoetScreen(
             is Loadable.Loading -> item { LoadingBox(Modifier.height(240.dp)) }
             is Loadable.Error -> item { ErrorBox(s.message, onRetry = loader::reload, modifier = Modifier.height(320.dp)) }
             is Loadable.Ready -> {
-                s.value.poet.description?.let { description ->
-                    item(key = "description") { ExpandableText(description) }
-                }
                 categoryItems(s.value.root.children, onOpenCategory)
                 poemItems(s.value.root.poems, onOpenPoem)
             }
@@ -136,6 +135,7 @@ private fun poetUrl(detail: PoetDetail): String = when (detail.poet.source) {
     PoetSource.Local -> "https://ganjoorak.ir/${detail.poet.slug}"
 }
 
+/** The site's poet card: identity, a row of stats, follow and random poem, then the bio. */
 @Composable
 private fun PoetHero(
     detail: PoetDetail,
@@ -146,45 +146,52 @@ private fun PoetHero(
     onRandom: () -> Unit,
 ) {
     val poet = detail.poet
+    val colors = MaterialTheme.colorScheme
     BorderedCard(Modifier.fillMaxWidth()) {
         Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                PoetAvatar(poet.name, poet.imageUrl, 72.dp)
-                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                PoetAvatar(poet.name, poet.imageUrl, 88.dp)
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Text(poet.nickname ?: poet.name, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                     poet.nickname?.takeIf { it != poet.name }?.let {
-                        Text(it, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        Text(poet.name, style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant)
                     }
-                    val stats = listOfNotNull(
-                        hijriLifespan(poet.birthYear, poet.deathYear),
-                        poet.birthPlace?.let { "زادگاه: $it" },
-                        poet.deathPlace?.let { "آرامگاه: $it" },
-                        detail.root.children.size.takeIf { it > 0 }?.let { "${it.toPersianDigits()} اثر" },
-                    )
-                    stats.forEach {
-                        Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    val meta = listOfNotNull(hijriLifespan(poet.birthYear, poet.deathYear), poet.birthPlace ?: poet.deathPlace)
+                    if (meta.isNotEmpty()) {
+                        Text(meta.joinToString(" · "), style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant)
+                    }
+                }
+            }
+            val stats = listOfNotNull(
+                detail.root.children.size.takeIf { it > 0 }?.let { "مجموعه" to it.toPersianDigits() },
+                detail.root.poems.size.takeIf { it > 0 }?.let { "شعر" to it.toPersianDigits() },
+            )
+            if (stats.isNotEmpty()) {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    stats.forEach { (label, value) ->
+                        Column(
+                            Modifier.weight(1f).clip(MaterialTheme.shapes.medium).background(colors.surfaceContainerHigh).padding(vertical = 8.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                        ) {
+                            Text(label, style = MaterialTheme.typography.labelSmall, color = colors.onSurfaceVariant)
+                            Text(value, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        }
                     }
                 }
             }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                if (followed) {
-                    Button(
-                        onClick = onToggleFollow,
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                            contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
-                        ),
-                        modifier = Modifier.weight(1f),
-                    ) {
-                        Icon(Icons.Filled.Check, contentDescription = null, modifier = Modifier.size(18.dp))
-                        Spacer(Modifier.width(8.dp))
-                        Text("دنبال می‌کنید")
-                    }
-                } else {
-                    Button(onClick = onToggleFollow, modifier = Modifier.weight(1f)) {
-                        Icon(Icons.Filled.PersonAdd, contentDescription = null, modifier = Modifier.size(18.dp))
-                        Spacer(Modifier.width(8.dp))
-                        Text("دنبال کردن")
-                    }
+                Button(
+                    onClick = onToggleFollow,
+                    colors = if (followed) {
+                        ButtonDefaults.buttonColors(containerColor = colors.secondaryContainer, contentColor = colors.onSecondaryContainer)
+                    } else {
+                        ButtonDefaults.buttonColors()
+                    },
+                    modifier = Modifier.weight(1f),
+                ) {
+                    Icon(if (followed) Icons.Filled.Check else Icons.Filled.PersonAdd, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text(if (followed) "دنبال می‌کنید" else "دنبال کردن")
                 }
                 OutlinedButton(onClick = onRandom, enabled = !loadingRandom, modifier = Modifier.weight(1f)) {
                     if (loadingRandom) {
@@ -197,33 +204,39 @@ private fun PoetHero(
                 }
             }
             if (randomError != null) {
-                Text(randomError, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+                Text(randomError, style = MaterialTheme.typography.bodySmall, color = colors.error)
             }
+            poet.description?.trim()?.takeIf { it.isNotEmpty() }?.let { Bio(it) }
         }
     }
 }
 
 @Composable
-private fun ExpandableText(text: String) {
+private fun Bio(text: String) {
     var expanded by rememberSaveable { mutableStateOf(false) }
-    Text(
-        text,
-        style = MaterialTheme.typography.bodyMedium,
-        textAlign = TextAlign.Justify,
-        maxLines = if (expanded) Int.MAX_VALUE else 4,
-        overflow = TextOverflow.Ellipsis,
-        modifier = Modifier
-            .widthIn(max = 720.dp)
-            .fillMaxWidth()
-            .clickable { expanded = !expanded }
-            .animateContentSize()
-            .padding(horizontal = 16.dp, vertical = 8.dp),
-    )
+    val long = text.length > 220
+    Column(Modifier.animateContentSize()) {
+        Text(
+            text,
+            style = MaterialTheme.typography.bodyMedium,
+            textAlign = TextAlign.Justify,
+            maxLines = if (long && !expanded) 4 else Int.MAX_VALUE,
+            overflow = TextOverflow.Ellipsis,
+        )
+        if (long) {
+            Text(
+                if (expanded) "کمتر" else "بیشتر",
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.clickable { expanded = !expanded }.padding(vertical = 6.dp),
+            )
+        }
+    }
 }
 
 fun LazyListScope.categoryItems(categories: List<CategoryRef>, onOpenCategory: (Int) -> Unit) {
     if (categories.isEmpty()) return
-    item(key = "cats-title") { SectionLabel("آثار") }
+    item(key = "cats-title") { SectionLabel("مجموعه‌ها") }
     items(categories, key = { "c${it.id}" }) { category ->
         AppRow(
             title = category.title,

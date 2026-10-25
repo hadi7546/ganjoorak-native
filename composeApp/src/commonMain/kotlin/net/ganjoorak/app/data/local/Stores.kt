@@ -38,11 +38,6 @@ data class AppSettings(
     /** Empty means random poems from all of Ganjoor, like the website. */
     val followedPoets: List<FollowedPoet> = emptyList(),
     val feedMode: FeedMode = FeedMode.All,
-    /** Topics offered as chips above the feed; see [net.ganjoorak.app.data.PoemInterests]. */
-    val interestKeys: List<String> = emptyList(),
-    /** The chips currently switched on; none means no narrowing. */
-    val activeInterestKeys: List<String> = emptyList(),
-    val hasChosenInterests: Boolean = false,
 )
 
 /** A JSON value persisted in [Settings] and mirrored as a [StateFlow]. */
@@ -81,31 +76,18 @@ class SettingsStore(settings: Settings) {
         if (settings.value.followedPoets.any { it.key == key }) unfollow(key) else follow(key, name)
     }
 
-    fun setInterests(keys: List<String>) = update { settings ->
-        val chosen = net.ganjoorak.app.data.sanitizeInterestKeys(keys)
-        settings.copy(
-            interestKeys = chosen,
-            activeInterestKeys = settings.activeInterestKeys.filter { it in chosen },
-            hasChosenInterests = true,
-        )
-    }
-
-    fun toggleActiveInterest(key: String) = update {
-        it.copy(
-            activeInterestKeys = if (key in it.activeInterestKeys) it.activeInterestKeys - key else it.activeInterestKeys + key,
-        )
-    }
-
-    fun clearActiveInterests() = update { it.copy(activeInterestKeys = emptyList()) }
-
     fun setFeedMode(mode: FeedMode) = update { it.copy(feedMode = mode) }
 }
 
 class LibraryStore(settings: Settings) {
     private val saved = PersistedValue(settings, "saved_poems", ListSerializer(SavedPoem.serializer()), emptyList())
     private val recent = PersistedValue(settings, "recent_searches", ListSerializer(String.serializer()), emptyList())
+    private val read = PersistedValue(settings, "read_history", ListSerializer(SavedPoem.serializer()), emptyList())
 
     val savedPoems: StateFlow<List<SavedPoem>> = saved.flow
+
+    /** Poems opened lately, newest first, like the site's «اخیراً دیده‌شده». */
+    val history: StateFlow<List<SavedPoem>> = read.flow
     val recentSearches: StateFlow<List<String>> = recent.flow
 
     fun toggleSaved(poem: Poem) {
@@ -113,12 +95,18 @@ class LibraryStore(settings: Settings) {
             if (list.any { it.ref == poem.ref }) {
                 list.filterNot { it.ref == poem.ref }
             } else {
-                listOf(SavedPoem(poem.id, poem.title, poem.poetName, poem.excerpt, poem.source, poem.ref.poetSlug)) + list
+                listOf(poem.toSaved()) + list
             }
         }
     }
 
     fun remove(ref: PoemRef) = saved.update { list -> list.filterNot { it.ref == ref } }
+
+    fun recordRead(poem: Poem) = read.update { list ->
+        (listOf(poem.toSaved()) + list.filterNot { it.ref == poem.ref }).take(MAX_HISTORY)
+    }
+
+    fun clearHistory() = read.update { emptyList() }
 
     fun addRecentSearch(term: String) {
         val clean = term.trim()
@@ -130,5 +118,8 @@ class LibraryStore(settings: Settings) {
 
     private companion object {
         const val MAX_RECENT = 12
+        const val MAX_HISTORY = 50
     }
 }
+
+private fun Poem.toSaved() = SavedPoem(id, title, poetName, excerpt, source, ref.poetSlug)

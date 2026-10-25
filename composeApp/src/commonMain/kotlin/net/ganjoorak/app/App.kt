@@ -41,7 +41,7 @@ import net.ganjoorak.app.data.local.FeedMode
 import net.ganjoorak.app.ui.components.AppActions
 import net.ganjoorak.app.ui.components.LocalAppActions
 import net.ganjoorak.app.ui.feed.FeedScreen
-import net.ganjoorak.app.ui.feed.InterestPickerSheet
+import net.ganjoorak.app.ui.explore.ExploreScreen
 import net.ganjoorak.app.ui.menu.AppMenu
 import net.ganjoorak.app.ui.menu.FeedPoetsSheet
 import net.ganjoorak.app.ui.menu.MenuTarget
@@ -59,6 +59,7 @@ import net.ganjoorak.app.ui.theme.GanjoorakTheme
 
 @Serializable data object FeedRoute
 @Serializable data object PoetsRoute
+@Serializable data object ExploreRoute
 @Serializable data object SearchRoute
 @Serializable data object SavedRoute
 @Serializable data object FollowingRoute
@@ -74,6 +75,7 @@ private fun PoemRef.route() = PoemRoute(id, source, poetSlug)
 
 private fun NavDestination.menuTarget(): MenuTarget? = when {
     hasRoute<FeedRoute>() -> MenuTarget.Home
+    hasRoute<ExploreRoute>() -> MenuTarget.Explore
     hasRoute<PoetsRoute>() -> MenuTarget.Poets
     hasRoute<SavedRoute>() -> MenuTarget.Saved
     hasRoute<FollowingRoute>() -> MenuTarget.Following
@@ -112,14 +114,7 @@ private fun AppShell() {
     val entry by nav.currentBackStackEntryAsState()
     val drawer = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
-    var pickingInterests by rememberSaveable { mutableStateOf(false) }
     var pickingPoets by rememberSaveable { mutableStateOf(false) }
-    // The site opens the interest picker on first run; here once per launch until a choice is saved.
-    var offeredInterests by rememberSaveable { mutableStateOf(false) }
-    if (!settings.hasChosenInterests && !offeredInterests) {
-        offeredInterests = true
-        pickingInterests = true
-    }
 
     val goTo: (Any) -> Unit = { route ->
         nav.navigate(route) {
@@ -144,10 +139,10 @@ private fun AppShell() {
                         scope.launch { drawer.close() }
                         when (target) {
                             MenuTarget.Home -> goTo(FeedRoute)
+                            MenuTarget.Explore -> goTo(ExploreRoute)
                             MenuTarget.Poets -> goTo(PoetsRoute)
                             MenuTarget.Saved -> goTo(SavedRoute)
                             MenuTarget.Following -> goTo(FollowingRoute)
-                            MenuTarget.Interests -> pickingInterests = true
                             MenuTarget.Profile -> goTo(ProfileRoute)
                             MenuTarget.Settings -> goTo(SettingsRoute)
                         }
@@ -158,11 +153,7 @@ private fun AppShell() {
         ) {
             Column(Modifier.fillMaxSize()) {
                 Box(Modifier.weight(1f)) {
-                    AppNavHost(
-                        nav,
-                        onEditInterests = { pickingInterests = true },
-                        onEditFollowing = { pickingPoets = true },
-                    )
+                    AppNavHost(nav, onEditFollowing = { pickingPoets = true })
                 }
                 MiniPlayer(
                     graph.player,
@@ -173,12 +164,11 @@ private fun AppShell() {
         }
     }
 
-    if (pickingInterests) InterestPickerSheet(onDismiss = { pickingInterests = false })
     if (pickingPoets) FeedPoetsSheet(onDismiss = { pickingPoets = false })
 }
 
 @Composable
-private fun AppNavHost(nav: NavHostController, onEditInterests: () -> Unit, onEditFollowing: () -> Unit) {
+private fun AppNavHost(nav: NavHostController, onEditFollowing: () -> Unit) {
     val graph = AppGraph.instance
     val openPoem: (PoemRef) -> Unit = { nav.navigate(it.route()) }
     val openPoet: (String) -> Unit = { nav.navigate(PoetRoute(it)) }
@@ -195,12 +185,12 @@ private fun AppNavHost(nav: NavHostController, onEditInterests: () -> Unit, onEd
                 onOpenPoet = openPoet,
                 onOpenCategory = openCategory,
                 onOpenPoets = { nav.navigate(PoetsRoute) },
-                onEditInterests = onEditInterests,
             )
         }
-        composable<PoetsRoute> { PoetsScreen(onBack = back, onOpenPoet = openPoet, onOpenFollowing = { nav.navigate(FollowingRoute) }) }
-        composable<SearchRoute> { SearchScreen(onBack = back, onOpenPoem = openPoem) }
-        composable<SavedRoute> { SavedScreen(onBack = back, onOpenPoem = openPoem) }
+        composable<ExploreRoute> { ExploreScreen(onBack = back, onOpenPoem = openPoem, onOpenPoet = openPoet) }
+        composable<PoetsRoute> { PoetsScreen(onBack = back, onOpenPoet = openPoet) }
+        composable<SearchRoute> { SearchScreen(onBack = back, onOpenPoem = openPoem, onOpenPoet = openPoet) }
+        composable<SavedRoute> { SavedScreen(onBack = back, onOpenPoem = openPoem, onOpenFeed = home) }
         composable<FollowingRoute> {
             FollowingScreen(
                 onBack = back,
@@ -219,7 +209,6 @@ private fun AppNavHost(nav: NavHostController, onEditInterests: () -> Unit, onEd
                 onOpenPoem = openPoem,
                 onOpenSaved = { nav.navigate(SavedRoute) },
                 onOpenFollowing = { nav.navigate(FollowingRoute) },
-                onEditInterests = onEditInterests,
                 onOpenSettings = { nav.navigate(SettingsRoute) },
             )
         }

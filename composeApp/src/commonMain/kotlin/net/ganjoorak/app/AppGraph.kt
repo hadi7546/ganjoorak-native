@@ -4,7 +4,6 @@ import com.russhwolf.settings.Settings
 import io.ktor.client.HttpClient
 import kotlinx.coroutines.MainScope
 import net.ganjoorak.app.data.EcholaliaSource
-import net.ganjoorak.app.data.InterestSource
 import net.ganjoorak.app.data.LocalSource
 import net.ganjoorak.app.data.PoemRepository
 import net.ganjoorak.app.data.local.LibraryStore
@@ -32,7 +31,6 @@ class AppGraph {
         api = GanjoorApi(http),
         echolalia = EcholaliaSource(EcholaliaApi(http)),
         local = LocalSource { slug -> Res.readBytes("files/poems/$slug.json").decodeToString() },
-        interests = InterestSource { key -> Res.readBytes("files/interests/$key.json").decodeToString() },
     )
     val settings = SettingsStore(storage)
     val library = LibraryStore(storage)

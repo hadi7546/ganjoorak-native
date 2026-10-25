@@ -58,11 +58,6 @@ for apk in androidApp/build/outputs/apk/debug/androidApp-debug.apk androidApp/bu
   adb logcat -c
   adb shell am start -W -n "$pkg/.MainActivity"
   sleep 25
-  # First run opens the topic picker over the feed; keep a picture of it, then close it.
-  dismiss_anr
-  [[ "$name" == *release* ]] && shot "$name-first-run"
-  tap "بعداً"
-  sleep 3
   if adb shell pidof "$pkg" >/dev/null; then
     echo "$name is running"
   else
@@ -100,18 +95,21 @@ for apk in androidApp/build/outputs/apk/debug/androidApp-debug.apk androidApp/bu
   dismiss_anr
   shot "$name"
   if [[ "$name" == *release* ]]; then
-    for tab in "شاعران" "حساب من"; do
+    for tab in "کاوش" "شاعران" "حساب کاربری"; do
       echo "--- menu → $tab"
       dismiss_anr
       tap "منو"
       sleep 2
-      shot "$name-menu"
+      [[ "$tab" == "کاوش" ]] && shot "$name-menu"
       tap "$tab"
       sleep 12
       dismiss_anr
       adb shell uiautomator dump /sdcard/ui.xml >/dev/null 2>&1 && adb shell cat /sdcard/ui.xml \
         | grep -oE '(text|content-desc)="[^"]+"' | head -30
       shot "$name-$tab"
+      # Inner pages have no menu button, like the site; go back to the poem for the next one.
+      adb shell input keyevent KEYCODE_BACK
+      sleep 2
     done
   fi
   echo "--- app log after waiting"

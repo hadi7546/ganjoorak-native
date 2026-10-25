@@ -23,8 +23,6 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -43,7 +41,7 @@ import androidx.compose.ui.unit.dp
 
 /**
  * The site's `AppPage`: a sticky top bar (back, a title that fades in once the large one scrolls
- * away, search and menu) over a large title header and the page's lazy content.
+ * away, the page's own actions) over a large title header and the page's lazy content.
  */
 @Composable
 fun AppPage(
@@ -52,64 +50,67 @@ fun AppPage(
     subtitle: String? = null,
     onBack: (() -> Unit)? = null,
     actions: @Composable RowScope.() -> Unit = {},
-    hideSearch: Boolean = false,
     headerExtra: (@Composable () -> Unit)? = null,
     listState: LazyListState = rememberLazyListState(),
     content: LazyListScope.() -> Unit,
 ) {
-    val app = LocalAppActions.current
     val colors = MaterialTheme.colorScheme
     val scrolled by remember(listState) {
         derivedStateOf { listState.firstVisibleItemIndex > 0 || listState.firstVisibleItemScrollOffset > 120 }
     }
-    val barTitleAlpha by animateFloatAsState(if (scrolled) 1f else 0f)
 
     Column(modifier.fillMaxSize().background(colors.background)) {
-        Column(Modifier.fillMaxWidth().windowInsetsPadding(WindowInsets.statusBars)) {
-            Row(Modifier.fillMaxWidth().height(56.dp).padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                if (onBack != null) {
-                    IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "بازگشت") }
-                }
-                Text(
-                    title,
-                    modifier = Modifier.weight(1f).padding(horizontal = 8.dp).alpha(barTitleAlpha),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                Row(horizontalArrangement = Arrangement.spacedBy(0.dp), verticalAlignment = Alignment.CenterVertically) {
-                    actions()
-                    if (!hideSearch) {
-                        IconButton(onClick = app.openSearch) { Icon(Icons.Filled.Search, contentDescription = "جست‌وجو") }
-                    }
-                    IconButton(onClick = app.openMenu) { Icon(Icons.Filled.Menu, contentDescription = "منو") }
-                }
-            }
-            HorizontalDivider(color = colors.outlineVariant.copy(alpha = barTitleAlpha))
-        }
+        AppPageBar(title, scrolled, onBack, actions)
         LazyColumn(
             state = listState,
             modifier = Modifier.weight(1f).fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally,
             contentPadding = WindowInsets.navigationBars.asPaddingValues(),
         ) {
-            item(key = "page-header") {
-                Column(
-                    Modifier.widthIn(max = 720.dp).fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 12.dp),
-                    verticalArrangement = Arrangement.spacedBy(6.dp),
-                ) {
-                    Text(title, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
-                    if (subtitle != null) {
-                        Text(subtitle, style = MaterialTheme.typography.bodyMedium, color = colors.onSurfaceVariant)
-                    }
-                    if (headerExtra != null) {
-                        Box(Modifier.padding(top = 6.dp)) { headerExtra() }
-                    }
-                }
-            }
+            item(key = "page-header") { AppPageHeader(title, subtitle, headerExtra) }
             content()
             item(key = "page-end") { Box(Modifier.height(24.dp)) }
+        }
+    }
+}
+
+/** The sticky bar of [AppPage]: back, the title once [scrolled], then the page's actions. */
+@Composable
+fun AppPageBar(title: String, scrolled: Boolean, onBack: (() -> Unit)?, actions: @Composable RowScope.() -> Unit = {}) {
+    val colors = MaterialTheme.colorScheme
+    val barTitleAlpha by animateFloatAsState(if (scrolled) 1f else 0f)
+    Column(Modifier.fillMaxWidth().background(colors.background).windowInsetsPadding(WindowInsets.statusBars)) {
+        Row(Modifier.fillMaxWidth().height(56.dp).padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+            if (onBack != null) {
+                IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "بازگشت") }
+            }
+            Text(
+                title,
+                modifier = Modifier.weight(1f).padding(horizontal = 8.dp).alpha(barTitleAlpha),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Row(verticalAlignment = Alignment.CenterVertically, content = actions)
+        }
+        HorizontalDivider(color = colors.outlineVariant.copy(alpha = barTitleAlpha))
+    }
+}
+
+/** The large title block that opens an [AppPage]. */
+@Composable
+fun AppPageHeader(title: String, subtitle: String? = null, extra: (@Composable () -> Unit)? = null) {
+    Column(
+        Modifier.widthIn(max = 720.dp).fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        Text(title, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+        if (subtitle != null) {
+            Text(subtitle, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        if (extra != null) {
+            Box(Modifier.padding(top = 6.dp)) { extra() }
         }
     }
 }

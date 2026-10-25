@@ -57,7 +57,6 @@ import net.ganjoorak.app.data.CategoryRef
 import net.ganjoorak.app.data.Poem
 import net.ganjoorak.app.data.PoemRef
 import net.ganjoorak.app.data.PoetSource
-import net.ganjoorak.app.data.interestByKey
 import net.ganjoorak.app.data.local.FeedMode
 import net.ganjoorak.app.ui.components.ErrorBox
 import net.ganjoorak.app.ui.components.LoadingBox
@@ -74,7 +73,7 @@ import net.ganjoorak.app.ui.theme.LocalPoemStyle
 
 /**
  * The home feed, as on the site: one poem per page, swipe up for the next. Above each title sit the
- * «همه / دنبال‌شده‌ها» switch and the topic chips; the controls float over the poem.
+ * «همه / دنبال‌شده‌ها» switch; the controls float over the poem.
  */
 @Composable
 fun FeedScreen(
@@ -82,7 +81,6 @@ fun FeedScreen(
     onOpenPoet: (String) -> Unit,
     onOpenCategory: (Int) -> Unit,
     onOpenPoets: () -> Unit,
-    onEditInterests: () -> Unit,
 ) {
     val graph = AppGraph.instance
     val vm = viewModel { FeedViewModel(graph.repository, graph.settings) }
@@ -93,21 +91,21 @@ fun FeedScreen(
     var sharing by remember { mutableStateOf<Poem?>(null) }
 
     val eyebrow: @Composable () -> Unit = {
-        FeedEyebrow(
-            mode = settings.feedMode,
-            onMode = graph.settings::setFeedMode,
-            interestKeys = settings.interestKeys.takeIf { settings.feedMode == FeedMode.All }.orEmpty(),
-            activeKeys = settings.activeInterestKeys,
-            onToggle = graph.settings::toggleActiveInterest,
-            onClear = graph.settings::clearActiveInterests,
-            onEdit = onEditInterests,
-        )
+        Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+            SegmentedSwitch(
+                options = listOf(FeedMode.All, FeedMode.Following),
+                selected = settings.feedMode,
+                label = { if (it == FeedMode.All) "همه" else "دنبال‌شده‌ها" },
+                onSelect = graph.settings::setFeedMode,
+            )
+        }
     }
 
     val pager = rememberPagerState(pageCount = { state.poems.size + 1 })
     LaunchedEffect(state.generation) { pager.scrollToPage(0) }
     LaunchedEffect(pager) { snapshotFlow { pager.currentPage }.collect { vm.onPageVisible(it) } }
     val current = state.poems.getOrNull(pager.currentPage)
+    LaunchedEffect(current?.ref) { current?.let(graph.library::recordRead) }
 
     Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
         when {
@@ -162,56 +160,6 @@ fun FeedScreen(
     }
 
     sharing?.let { poem -> ShareSheet(poem, onDismiss = { sharing = null }) }
-}
-
-/** The switch, a hairline and the scrollable topic chips, in one row above the title. */
-@Composable
-private fun FeedEyebrow(
-    mode: FeedMode,
-    onMode: (FeedMode) -> Unit,
-    interestKeys: List<String>,
-    activeKeys: List<String>,
-    onToggle: (String) -> Unit,
-    onClear: () -> Unit,
-    onEdit: () -> Unit,
-) {
-    Row(
-        Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = if (interestKeys.isEmpty()) Arrangement.Center else Arrangement.Start,
-    ) {
-        SegmentedSwitch(
-            options = listOf(FeedMode.All, FeedMode.Following),
-            selected = mode,
-            label = { if (it == FeedMode.All) "همه" else "دنبال‌شده‌ها" },
-            onSelect = onMode,
-        )
-        if (interestKeys.isNotEmpty()) {
-            VerticalDivider(Modifier.height(24.dp).padding(horizontal = 8.dp), color = MaterialTheme.colorScheme.outlineVariant)
-            LazyRow(
-                Modifier.weight(1f),
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                item(key = "all") { TopicChip("همهٔ موضوع‌ها", active = activeKeys.isEmpty(), onClick = onClear) }
-                items(interestKeys, key = { it }) { key ->
-                    TopicChip(interestByKey(key)?.label ?: key, active = key in activeKeys, onClick = { onToggle(key) })
-                }
-                item(key = "edit") {
-                    Box(
-                        Modifier
-                            .size(32.dp)
-                            .clip(CircleShape)
-                            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape)
-                            .clickable(onClick = onEdit),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Icon(Icons.Filled.Tune, contentDescription = "ویرایش علاقه‌مندی‌ها", modifier = Modifier.size(16.dp))
-                    }
-                }
-            }
-        }
-    }
 }
 
 @Composable

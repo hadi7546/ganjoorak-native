@@ -20,7 +20,6 @@ class PoemRepository(
     private val api: GanjoorApi,
     private val echolalia: EcholaliaSource,
     private val local: LocalSource,
-    private val interests: InterestSource = InterestSource { error("no interest lists") },
 ) {
     private val mutex = Mutex()
     private var poetGroups: List<PoetGroup>? = null
@@ -119,22 +118,6 @@ class PoemRepository(
                 PoetSource.Local -> local.randomPoem(parsed!!.ref)
             }
         }.also { poems[it.ref.key] = it }
-    }
-
-    /** The next poem from one of the [interestKeys], chosen at random, or null when none has poems. */
-    suspend fun interestPoem(interestKeys: Collection<String>): Poem? {
-        // A broken or missing list only means falling back to plain random poems.
-        val id = interestKeys.shuffled().firstNotNullOfOrNull { key ->
-            try {
-                interests.nextPoemId(key)
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                println("Ganjoorak: interest list $key: $e")
-                null
-            }
-        } ?: return null
-        return poem(PoemRef(PoetSource.Ganjoor, id))
     }
 
     /**

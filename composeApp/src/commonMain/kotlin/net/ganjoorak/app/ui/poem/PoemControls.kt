@@ -13,8 +13,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Bookmark
-import androidx.compose.material.icons.filled.BookmarkBorder
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
@@ -68,8 +68,8 @@ fun BoxScope.PoemFloatingControls(
         extra?.invoke(this)
         FloatingIconButton(Icons.Filled.Share, "هم‌رسانی", onShare)
         FloatingIconButton(
-            if (isSaved) Icons.Filled.Bookmark else Icons.Filled.BookmarkBorder,
-            if (isSaved) "حذف از نشان‌ها" else "نشان کردن",
+            if (isSaved) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
+            if (isSaved) "حذف از پسندیده‌ها" else "پسندیدن",
             onToggleSave,
             active = isSaved,
         )

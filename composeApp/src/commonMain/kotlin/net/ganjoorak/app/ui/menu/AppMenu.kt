@@ -16,13 +16,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.PersonOutline
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.Tune
+import androidx.compose.material.icons.filled.Explore
+import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.HowToReg
 import androidx.compose.material3.HorizontalDivider
@@ -49,7 +49,7 @@ import net.ganjoorak.app.util.toPersianDigits
 import org.jetbrains.compose.resources.painterResource
 import kotlin.math.roundToInt
 
-enum class MenuTarget { Home, Poets, Saved, Following, Interests, Profile, Settings }
+enum class MenuTarget { Home, Explore, Poets, Saved, Following, Profile, Settings }
 
 /** The site's navigation drawer: brand, destinations in two groups, then theme and text size. */
 @Composable
@@ -86,19 +86,19 @@ fun AppMenu(current: MenuTarget?, onSelect: (MenuTarget) -> Unit, onClose: () ->
         HorizontalDivider(color = colors.outlineVariant)
 
         Column(Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState()).padding(vertical = 8.dp)) {
-            MenuGroup("کاوش")
+            MenuGroup("کشف")
             MenuItem(Icons.Filled.Home, "صفحهٔ اصلی", current == MenuTarget.Home) { onSelect(MenuTarget.Home) }
+            MenuItem(Icons.Filled.Explore, "کاوش", current == MenuTarget.Explore) { onSelect(MenuTarget.Explore) }
             MenuItem(Icons.Filled.People, "شاعران", current == MenuTarget.Poets) { onSelect(MenuTarget.Poets) }
             MenuGroup("کتابخانهٔ من")
-            MenuItem(Icons.Filled.BookmarkBorder, "نشان‌شده‌ها", current == MenuTarget.Saved) { onSelect(MenuTarget.Saved) }
+            MenuItem(Icons.Filled.FavoriteBorder, "نشان‌شده‌ها", current == MenuTarget.Saved) { onSelect(MenuTarget.Saved) }
             MenuItem(
                 Icons.Filled.HowToReg,
                 "شاعران دنبال‌شده",
                 current == MenuTarget.Following,
                 count = settings.followedPoets.size.takeIf { it > 0 },
             ) { onSelect(MenuTarget.Following) }
-            MenuItem(Icons.Filled.Tune, "علاقه‌مندی‌ها", current == MenuTarget.Interests) { onSelect(MenuTarget.Interests) }
-            MenuItem(Icons.Filled.PersonOutline, "حساب من", current == MenuTarget.Profile) { onSelect(MenuTarget.Profile) }
+            MenuItem(Icons.Filled.AccountCircle, "حساب کاربری", current == MenuTarget.Profile) { onSelect(MenuTarget.Profile) }
         }
 
         HorizontalDivider(color = colors.outlineVariant)
