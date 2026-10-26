@@ -53,7 +53,8 @@ private val BarHeight = 48.dp
 
 /**
  * The poem screen's controls as a compact Material 3 Expressive floating bar of three groups:
- * «poet, like, share», «play» (a capsule that spells out «در حال پخش» while playing) and «menu».
+ * «menu», «play» (a capsule that spells out «در حال پخش» while playing) and «share, like, poet»,
+ * right to left: the mirror of «poet, like, share | play | menu».
  * Search lives in the menu.
  */
 @Composable
@@ -78,28 +79,28 @@ fun BoxScope.PoemFloatingControls(
         horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        Pill { BarIcon(Icons.Filled.Menu, "منو", app.openMenu) }
         if (poem != null) {
+            if (poem.recitations.isNotEmpty()) {
+                Pill { PlayCapsule(isPlaying, onPlay) }
+            }
             Pill {
-                val key = poem.poetKey
-                if (key != null && onOpenPoet != null) {
-                    BarItem(onClick = { onOpenPoet(key) }, description = poem.poetName) {
-                        PoetAvatar(poem.poetName, poem.poetImageUrl, 28.dp)
-                    }
-                }
+                extra?.invoke(this)
+                BarIcon(Icons.Filled.Share, "هم‌رسانی", onShare)
                 BarIcon(
                     if (isSaved) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
                     if (isSaved) "حذف از پسندیده‌ها" else "پسندیدن",
                     onToggleSave,
                     tint = if (isSaved) colors.error else null,
                 )
-                BarIcon(Icons.Filled.Share, "هم‌رسانی", onShare)
-                extra?.invoke(this)
-            }
-            if (poem.recitations.isNotEmpty()) {
-                Pill { PlayCapsule(isPlaying, onPlay) }
+                val key = poem.poetKey
+                if (key != null && onOpenPoet != null) {
+                    BarItem(onClick = { onOpenPoet(key) }, description = poem.poetName) {
+                        PoetAvatar(poem.poetName, poem.poetImageUrl, 28.dp)
+                    }
+                }
             }
         }
-        Pill { BarIcon(Icons.Filled.Menu, "منو", app.openMenu) }
     }
 }
 
