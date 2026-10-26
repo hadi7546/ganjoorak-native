@@ -65,54 +65,44 @@ fun PoemHeader(
     eyebrow: (@Composable () -> Unit)? = null,
 ) {
     Column(
-        modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 16.dp),
+        modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(10.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
-        eyebrow?.invoke()
+        if (eyebrow != null) {
+            eyebrow()
+            Spacer(Modifier.height(6.dp))
+        }
         Text(
             poem.title,
-            style = MaterialTheme.typography.headlineMedium.copy(fontFamily = LocalPoemStyle.current.fontFamily),
+            style = MaterialTheme.typography.headlineSmall.copy(fontFamily = LocalPoemStyle.current.fontFamily),
             fontWeight = FontWeight.Bold,
             textAlign = TextAlign.Center,
-            modifier = Modifier.padding(top = 8.dp),
         )
+        // One muted line: the poet (their portrait is already on the bar) and the book trail.
+        val muted = MaterialTheme.colorScheme.onSurfaceVariant
         val poetClick = poem.poetKey?.let { key -> onPoetClick?.let { { it(key) } } }
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier
-                .clip(RoundedCornerShape(24.dp))
-                .then(if (poetClick != null) Modifier.clickable(onClick = poetClick) else Modifier)
-                .padding(horizontal = 8.dp, vertical = 4.dp),
-        ) {
-            PoetAvatar(poem.poetName, poem.poetImageUrl, 28.dp)
+        Row(Modifier.horizontalScroll(rememberScrollState()), verticalAlignment = Alignment.CenterVertically) {
             Text(
                 poem.poetName,
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(start = 8.dp),
+                style = MaterialTheme.typography.labelLarge,
+                color = muted,
+                modifier = Modifier
+                    .clip(RoundedCornerShape(8.dp))
+                    .then(if (poetClick != null) Modifier.clickable(onClick = poetClick) else Modifier)
+                    .padding(horizontal = 4.dp, vertical = 2.dp),
             )
-        }
-        val crumbs = poem.breadcrumbs.drop(1)
-        if (crumbs.isNotEmpty()) {
-            Row(
-                Modifier.horizontalScroll(rememberScrollState()),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                crumbs.forEachIndexed { index, crumb ->
-                    if (index > 0) {
-                        Text(" › ", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.outline)
-                    }
-                    Text(
-                        crumb.title,
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(8.dp))
-                            .then(if (onCategoryClick != null && crumb.id > 0) Modifier.clickable { onCategoryClick(crumb) } else Modifier)
-                            .padding(horizontal = 4.dp, vertical = 2.dp),
-                    )
-                }
+            poem.breadcrumbs.drop(1).forEach { crumb ->
+                Text("›", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.outline)
+                Text(
+                    crumb.title,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = muted,
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .then(if (onCategoryClick != null && crumb.id > 0) Modifier.clickable { onCategoryClick(crumb) } else Modifier)
+                        .padding(horizontal = 4.dp, vertical = 2.dp),
+                )
             }
         }
     }
