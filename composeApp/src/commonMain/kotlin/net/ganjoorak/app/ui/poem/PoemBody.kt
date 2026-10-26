@@ -53,8 +53,8 @@ fun coupletNumbers(blocks: List<PoemBlock>): IntArray {
 }
 
 /**
- * The site's title section: an optional eyebrow (feed switch and topic chips), the poem title, the
- * poet line, the book trail and the summary.
+ * The site's title section: an optional eyebrow (the feed switch), the poem title, the poet line
+ * and the book trail.
  */
 @Composable
 fun PoemHeader(
@@ -114,14 +114,6 @@ fun PoemHeader(
                     )
                 }
             }
-        }
-        poem.summary?.let {
-            Text(
-                it,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center,
-            )
         }
     }
 }

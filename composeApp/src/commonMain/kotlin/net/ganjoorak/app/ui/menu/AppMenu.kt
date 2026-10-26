@@ -50,7 +50,7 @@ import kotlin.math.roundToInt
 
 enum class MenuTarget { Home, Explore, Poets, Saved, Following, Profile, Settings }
 
-/** The site's menu, shown in a bottom sheet: brand, destinations in two groups, then theme and text size. */
+/** The site's menu, shown in a bottom sheet: destinations in two groups, then theme and text size. */
 @Composable
 fun AppMenu(current: MenuTarget?, onSelect: (MenuTarget) -> Unit, onClose: () -> Unit) {
     val store = AppGraph.instance.settings
@@ -58,28 +58,6 @@ fun AppMenu(current: MenuTarget?, onSelect: (MenuTarget) -> Unit, onClose: () ->
     val colors = MaterialTheme.colorScheme
 
     Column(Modifier.fillMaxWidth().padding(bottom = 8.dp)) {
-        Row(
-            Modifier.fillMaxWidth().padding(start = 16.dp, end = 8.dp, top = 12.dp, bottom = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            Image(
-                painterResource(Res.drawable.app_icon),
-                contentDescription = null,
-                modifier = Modifier.size(40.dp).clip(RoundedCornerShape(10.dp)),
-            )
-            Column(Modifier.weight(1f)) {
-                Text("گنجورک", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                Text(
-                    "راحت‌تر شعر بخوانیم و شعر گوش دهیم",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = colors.onSurfaceVariant,
-                )
-            }
-            IconButton(onClick = onClose) { Icon(Icons.Filled.Close, contentDescription = "بستن منو") }
-        }
-        HorizontalDivider(color = colors.outlineVariant)
-
         Column(Modifier.padding(vertical = 8.dp)) {
             MenuGroup("کشف")
             MenuItem(Icons.Filled.Home, "صفحهٔ اصلی", current == MenuTarget.Home) { onSelect(MenuTarget.Home) }
