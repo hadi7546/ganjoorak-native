@@ -9,9 +9,7 @@ concurrency:
   group: native-${{ github.ref }}
   cancel-in-progress: true
 
-env:
-  # Where finished builds are uploaded; a SHARE_UPLOAD_URL repository secret overrides it.
-  SHARE_URL: ${{ secrets.SHARE_UPLOAD_URL || 'https://cp.okcomp.ir/share/ja89s0vh5x2i/' }}
+# Uploading builds to cp.okcomp.ir is paused; scripts/upload-to-share.sh is kept for when it returns.
 
 jobs:
   android-linux:
@@ -44,14 +42,6 @@ jobs:
           retention-days: 7
           name: ganjoorak-linux
           path: composeApp/build/compose/binaries/main/deb/*.deb
-      - name: Upload to share
-        if: github.event_name != 'pull_request'
-        continue-on-error: true
-        run: |
-          bash scripts/upload-to-share.sh \
-            androidApp/build/outputs/apk/release/androidApp-release.apk \
-            androidApp/build/outputs/apk/debug/androidApp-debug.apk \
-            composeApp/build/compose/binaries/main/deb/*.deb
 
   android-launch:
     name: Android launch test
@@ -104,8 +94,3 @@ jobs:
           retention-days: 7
           name: ganjoorak-windows
           path: composeApp/build/compose/binaries/main/msi/*.msi
-      - name: Upload to share
-        if: github.event_name != 'pull_request'
-        continue-on-error: true
-        shell: bash
-        run: bash scripts/upload-to-share.sh composeApp/build/compose/binaries/main/msi/*.msi
