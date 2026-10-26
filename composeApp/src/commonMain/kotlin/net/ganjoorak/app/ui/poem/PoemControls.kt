@@ -47,14 +47,14 @@ import net.ganjoorak.app.ui.components.LocalAppActions
 import net.ganjoorak.app.ui.components.PoetAvatar
 
 /** Height the floating bar takes at the bottom; poem lists pad their end by this much. */
-val PoemControlsHeight = 96.dp
+val PoemControlsHeight = 80.dp
 
-private val BarHeight = 56.dp
+private val BarHeight = 48.dp
 
 /**
- * The poem screen's controls as a Material 3 Expressive floating bar: a pill with the poet, like,
- * share, play (a capsule that spells out «در حال پخش» while playing, like a selected tab) and the
- * menu, and search in its own round button beside it.
+ * The poem screen's controls as a compact Material 3 Expressive floating bar of three groups:
+ * «poet, like, share», «play» (a capsule that spells out «در حال پخش» while playing) and «menu».
+ * Search lives in the menu.
  */
 @Composable
 fun BoxScope.PoemFloatingControls(
@@ -75,46 +75,44 @@ fun BoxScope.PoemFloatingControls(
             .fillMaxWidth()
             .windowInsetsPadding(WindowInsets.navigationBars)
             .padding(horizontal = 8.dp, vertical = 10.dp),
-        horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterHorizontally),
+        horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Surface(shape = CircleShape, color = colors.surfaceContainerHigh, shadowElevation = 6.dp) {
-            Row(
-                Modifier.height(BarHeight).padding(horizontal = 6.dp),
-                horizontalArrangement = Arrangement.spacedBy(2.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                val key = poem?.poetKey
-                if (poem != null && key != null && onOpenPoet != null) {
+        if (poem != null) {
+            Pill {
+                val key = poem.poetKey
+                if (key != null && onOpenPoet != null) {
                     BarItem(onClick = { onOpenPoet(key) }, description = poem.poetName) {
-                        PoetAvatar(poem.poetName, poem.poetImageUrl, 32.dp)
+                        PoetAvatar(poem.poetName, poem.poetImageUrl, 28.dp)
                     }
                 }
-                if (poem != null) {
-                    BarIcon(
-                        if (isSaved) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
-                        if (isSaved) "حذف از پسندیده‌ها" else "پسندیدن",
-                        onToggleSave,
-                        tint = if (isSaved) colors.error else null,
-                    )
-                    BarIcon(Icons.Filled.Share, "هم‌رسانی", onShare)
-                    extra?.invoke(this)
-                    if (poem.recitations.isNotEmpty()) {
-                        PlayCapsule(isPlaying, onPlay)
-                    }
-                }
-                BarIcon(Icons.Filled.Menu, "منو", app.openMenu)
+                BarIcon(
+                    if (isSaved) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
+                    if (isSaved) "حذف از پسندیده‌ها" else "پسندیدن",
+                    onToggleSave,
+                    tint = if (isSaved) colors.error else null,
+                )
+                BarIcon(Icons.Filled.Share, "هم‌رسانی", onShare)
+                extra?.invoke(this)
+            }
+            if (poem.recitations.isNotEmpty()) {
+                Pill { PlayCapsule(isPlaying, onPlay) }
             }
         }
-        Surface(
-            onClick = app.openSearch,
-            shape = CircleShape,
-            color = colors.surfaceContainerHigh,
-            shadowElevation = 6.dp,
-            modifier = Modifier.size(BarHeight),
-        ) {
-            Box(contentAlignment = Alignment.Center) { Icon(Icons.Filled.Search, contentDescription = "جست‌وجو") }
-        }
+        Pill { BarIcon(Icons.Filled.Menu, "منو", app.openMenu) }
+    }
+}
+
+/** One floating group of the bar. */
+@Composable
+private fun Pill(content: @Composable RowScope.() -> Unit) {
+    Surface(shape = CircleShape, color = MaterialTheme.colorScheme.surfaceContainerHigh, shadowElevation = 6.dp) {
+        Row(
+            Modifier.height(BarHeight).padding(horizontal = 4.dp),
+            horizontalArrangement = Arrangement.spacedBy(0.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            content = content,
+        )
     }
 }
 
@@ -122,7 +120,7 @@ fun BoxScope.PoemFloatingControls(
 private fun BarItem(onClick: () -> Unit, description: String, content: @Composable () -> Unit) {
     Box(
         Modifier
-            .size(44.dp)
+            .size(40.dp)
             .clip(CircleShape)
             .selectable(selected = false, role = Role.Button, onClick = onClick),
         contentAlignment = Alignment.Center,
@@ -133,7 +131,7 @@ private fun BarItem(onClick: () -> Unit, description: String, content: @Composab
 @Composable
 fun BarIcon(icon: ImageVector, description: String, onClick: () -> Unit, tint: Color? = null) {
     BarItem(onClick, description) {
-        Icon(icon, contentDescription = description, tint = tint ?: MaterialTheme.colorScheme.onSurfaceVariant)
+        Icon(icon, contentDescription = description, tint = tint ?: MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
     }
 }
 
@@ -145,7 +143,7 @@ private fun PlayCapsule(isPlaying: Boolean, onClick: () -> Unit) {
     val content by animateColorAsState(if (isPlaying) colors.onPrimary else colors.onPrimaryContainer)
     Row(
         Modifier
-            .height(44.dp)
+            .height(40.dp)
             .clip(CircleShape)
             .background(container)
             .selectable(selected = isPlaying, role = Role.Button, onClick = onClick)

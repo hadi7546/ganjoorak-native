@@ -19,6 +19,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Remove
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Explore
 import androidx.compose.material.icons.filled.AccountCircle
@@ -48,7 +49,7 @@ import net.ganjoorak.app.util.toPersianDigits
 import org.jetbrains.compose.resources.painterResource
 import kotlin.math.roundToInt
 
-enum class MenuTarget { Home, Explore, Poets, Saved, Following, Profile, Settings }
+enum class MenuTarget { Search, Home, Explore, Poets, Saved, Following, Profile, Settings }
 
 /** The site's menu, shown in a bottom sheet: destinations in two groups, then theme and text size. */
 @Composable
@@ -59,6 +60,7 @@ fun AppMenu(current: MenuTarget?, onSelect: (MenuTarget) -> Unit, onClose: () ->
 
     Column(Modifier.fillMaxWidth().padding(bottom = 8.dp)) {
         Column(Modifier.padding(vertical = 8.dp)) {
+            MenuItem(Icons.Filled.Search, "جست‌وجو", current == MenuTarget.Search) { onSelect(MenuTarget.Search) }
             MenuGroup("کشف")
             MenuItem(Icons.Filled.Home, "صفحهٔ اصلی", current == MenuTarget.Home) { onSelect(MenuTarget.Home) }
             MenuItem(Icons.Filled.Explore, "کاوش", current == MenuTarget.Explore) { onSelect(MenuTarget.Explore) }

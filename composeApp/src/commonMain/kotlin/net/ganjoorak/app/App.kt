@@ -75,6 +75,7 @@ private fun PoemRef.route() = PoemRoute(id, source, poetSlug)
 
 private fun NavDestination.menuTarget(): MenuTarget? = when {
     hasRoute<FeedRoute>() -> MenuTarget.Home
+    hasRoute<SearchRoute>() -> MenuTarget.Search
     hasRoute<ExploreRoute>() -> MenuTarget.Explore
     hasRoute<PoetsRoute>() -> MenuTarget.Poets
     hasRoute<SavedRoute>() -> MenuTarget.Saved
@@ -148,6 +149,7 @@ private fun AppShell() {
                     onSelect = { target ->
                         menuOpen = false
                         when (target) {
+                            MenuTarget.Search -> nav.navigate(SearchRoute) { launchSingleTop = true }
                             MenuTarget.Home -> goTo(FeedRoute)
                             MenuTarget.Explore -> goTo(ExploreRoute)
                             MenuTarget.Poets -> goTo(PoetsRoute)
