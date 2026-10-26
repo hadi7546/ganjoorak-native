@@ -29,7 +29,6 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -51,18 +50,14 @@ import kotlin.math.roundToInt
 
 enum class MenuTarget { Home, Explore, Poets, Saved, Following, Profile, Settings }
 
-/** The site's navigation drawer: brand, destinations in two groups, then theme and text size. */
+/** The site's menu, shown in a bottom sheet: brand, destinations in two groups, then theme and text size. */
 @Composable
 fun AppMenu(current: MenuTarget?, onSelect: (MenuTarget) -> Unit, onClose: () -> Unit) {
     val store = AppGraph.instance.settings
     val settings by store.settings.collectAsState()
     val colors = MaterialTheme.colorScheme
 
-    ModalDrawerSheet(
-        modifier = Modifier.widthIn(max = 320.dp),
-        drawerContainerColor = colors.surfaceContainer,
-        drawerContentColor = colors.onSurface,
-    ) {
+    Column(Modifier.fillMaxWidth().padding(bottom = 8.dp)) {
         Row(
             Modifier.fillMaxWidth().padding(start = 16.dp, end = 8.dp, top = 12.dp, bottom = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
@@ -85,7 +80,7 @@ fun AppMenu(current: MenuTarget?, onSelect: (MenuTarget) -> Unit, onClose: () ->
         }
         HorizontalDivider(color = colors.outlineVariant)
 
-        Column(Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState()).padding(vertical = 8.dp)) {
+        Column(Modifier.padding(vertical = 8.dp)) {
             MenuGroup("کشف")
             MenuItem(Icons.Filled.Home, "صفحهٔ اصلی", current == MenuTarget.Home) { onSelect(MenuTarget.Home) }
             MenuItem(Icons.Filled.Explore, "کاوش", current == MenuTarget.Explore) { onSelect(MenuTarget.Explore) }

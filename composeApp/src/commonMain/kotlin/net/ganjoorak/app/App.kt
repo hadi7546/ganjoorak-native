@@ -8,7 +8,7 @@ import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalNavigationDrawer
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Surface
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
@@ -112,7 +112,7 @@ private fun AppShell() {
     val settings by graph.settings.settings.collectAsState()
     val nav = rememberNavController()
     val entry by nav.currentBackStackEntryAsState()
-    val drawer = rememberDrawerState(DrawerValue.Closed)
+    var menuOpen by rememberSaveable { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     var pickingPoets by rememberSaveable { mutableStateOf(false) }
 
@@ -122,21 +122,31 @@ private fun AppShell() {
             launchSingleTop = true
         }
     }
-    val actions = remember(nav, drawer) {
+    val actions = remember(nav) {
         AppActions(
-            openMenu = { scope.launch { drawer.open() } },
+            openMenu = { menuOpen = true },
             openSearch = { nav.navigate(SearchRoute) { launchSingleTop = true } },
         )
     }
 
     CompositionLocalProvider(LocalAppActions provides actions) {
-        ModalNavigationDrawer(
-            drawerState = drawer,
-            drawerContent = {
+        Column(Modifier.fillMaxSize()) {
+            Box(Modifier.weight(1f)) {
+                AppNavHost(nav, onEditFollowing = { pickingPoets = true })
+            }
+            MiniPlayer(
+                graph.player,
+                onOpenPoem = { nav.navigate(it.route()) },
+                modifier = Modifier.windowInsetsPadding(WindowInsets.navigationBars),
+            )
+        }
+
+        if (menuOpen) {
+            ModalBottomSheet(onDismissRequest = { menuOpen = false }, containerColor = MaterialTheme.colorScheme.surfaceContainer) {
                 AppMenu(
                     current = entry?.destination?.menuTarget(),
                     onSelect = { target ->
-                        scope.launch { drawer.close() }
+                        menuOpen = false
                         when (target) {
                             MenuTarget.Home -> goTo(FeedRoute)
                             MenuTarget.Explore -> goTo(ExploreRoute)
@@ -147,18 +157,7 @@ private fun AppShell() {
                             MenuTarget.Settings -> goTo(SettingsRoute)
                         }
                     },
-                    onClose = { scope.launch { drawer.close() } },
-                )
-            },
-        ) {
-            Column(Modifier.fillMaxSize()) {
-                Box(Modifier.weight(1f)) {
-                    AppNavHost(nav, onEditFollowing = { pickingPoets = true })
-                }
-                MiniPlayer(
-                    graph.player,
-                    onOpenPoem = { nav.navigate(it.route()) },
-                    modifier = Modifier.windowInsetsPadding(WindowInsets.navigationBars),
+                    onClose = { menuOpen = false },
                 )
             }
         }

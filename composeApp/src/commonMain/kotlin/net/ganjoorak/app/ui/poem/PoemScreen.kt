@@ -122,6 +122,35 @@ fun PoemScreen(
             onBack,
             modifier = Modifier.align(Alignment.TopStart).windowInsetsPadding(WindowInsets.statusBars).padding(12.dp),
         )
+        Box(Modifier.align(Alignment.TopEnd).windowInsetsPadding(WindowInsets.statusBars).padding(12.dp)) {
+            if (poem != null) {
+                var menu by remember { mutableStateOf(false) }
+                Box {
+                    FloatingIconButton(Icons.Filled.MoreVert, "بیشتر", { menu = true })
+                    DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+                        DropdownMenuItem(
+                            text = { Text("کپی متن شعر") },
+                            leadingIcon = { Icon(Icons.Filled.ContentCopy, contentDescription = null) },
+                            onClick = {
+                                menu = false
+                                copyText(poem.shareText())
+                                scope.launch { snackbar.showSnackbar("متن شعر کپی شد") }
+                            },
+                        )
+                        if (poem.link.isNotBlank()) {
+                            DropdownMenuItem(
+                                text = { Text(if (poem.source == PoetSource.Ganjoor) "دیدن در گنجور" else "مشاهدهٔ منبع") },
+                                leadingIcon = { Icon(Icons.AutoMirrored.Filled.OpenInNew, contentDescription = null) },
+                                onClick = {
+                                    menu = false
+                                    uriHandler.openUri(poem.link)
+                                },
+                            )
+                        }
+                    }
+                }
+            }
+        }
 
         PoemFloatingControls(
             poem = poem,
@@ -131,35 +160,6 @@ fun PoemScreen(
             onShare = { sharing = true },
             onPlay = { poem?.let { p -> if (player.poemRef == p.ref) graph.player.toggle() else graph.player.play(p) } },
             onOpenPoet = onOpenPoet,
-            extra = {
-                if (poem != null) {
-                    var menu by remember { mutableStateOf(false) }
-                    Box {
-                        FloatingIconButton(Icons.Filled.MoreVert, "بیشتر", { menu = true })
-                        DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
-                            DropdownMenuItem(
-                                text = { Text("کپی متن شعر") },
-                                leadingIcon = { Icon(Icons.Filled.ContentCopy, contentDescription = null) },
-                                onClick = {
-                                    menu = false
-                                    copyText(poem.shareText())
-                                    scope.launch { snackbar.showSnackbar("متن شعر کپی شد") }
-                                },
-                            )
-                            if (poem.link.isNotBlank()) {
-                                DropdownMenuItem(
-                                    text = { Text(if (poem.source == PoetSource.Ganjoor) "دیدن در گنجور" else "مشاهدهٔ منبع") },
-                                    leadingIcon = { Icon(Icons.AutoMirrored.Filled.OpenInNew, contentDescription = null) },
-                                    onClick = {
-                                        menu = false
-                                        uriHandler.openUri(poem.link)
-                                    },
-                                )
-                            }
-                        }
-                    }
-                }
-            },
         )
         SnackbarHost(snackbar, Modifier.align(Alignment.BottomCenter).padding(bottom = PoemControlsHeight))
     }
